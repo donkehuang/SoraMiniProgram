@@ -320,6 +320,70 @@ Page({
     }
   },
 
+  // 智能等待视频文件就绪
+  async waitForVideoReady(videoId, apiBaseUrl) {
+    console.log('[等待] 开始智能等待视频文件就绪...')
+
+    const filename = `${videoId}.mp4`
+    const maxAttempts = 10  // 最多尝试10次
+    const checkInterval = 3000  // 每3秒检查一次
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      console.log(`[等待] 第 ${attempt} 次检查文件...`)
+
+      try {
+        // 尝试请求文件
+        const fileExists = await this.checkVideoExists(videoId, apiBaseUrl)
+
+        if (fileExists) {
+          console.log(`[等待] ✅ 文件就绪，第 ${attempt} 次检查成功`)
+          return true  // 文件存在，可以继续
+        }
+
+        // 文件不存在，等待后重试
+        console.log(`[等待] ⏸️ 文件未就绪，等待 ${checkInterval/1000} 秒后重试...`)
+        await new Promise(resolve => setTimeout(resolve, checkInterval))
+
+      } catch (error) {
+        console.error(`[等待] 第 ${attempt} 次检查出错:`, error)
+        
+        // 最后一次尝试失败，直接返回，让下载重试机制处理
+        if (attempt === maxAttempts) {
+          console.warn('[等待] 已达到最大尝试次数，继续下载流程')
+          return false
+        }
+        
+        // 等待后继续尝试
+        await new Promise(resolve => setTimeout(resolve, checkInterval))
+      }
+    }
+
+    console.log('[等待] 等待结束，继续下载')
+    return false
+  },
+
+  // 检查视频文件是否存在
+  async checkVideoExists(videoId, apiBaseUrl) {
+    const filename = `${videoId}.mp4`
+    const url = `${apiBaseUrl}/videos/${filename}`
+
+    return new Promise((resolve, reject) => {
+      wx.request({
+        url: url,
+        method: 'HEAD',
+        timeout: 5000,
+        success: (res) => {
+          // HEAD请求成功，检查状态码
+          resolve(res.statusCode === 200)
+        },
+        fail: (err) => {
+          // 请求失败
+          resolve(false)
+        }
+      })
+    })
+  },
+
   // 跳转到测试页面
   goToTest() {
     wx.navigateTo({
