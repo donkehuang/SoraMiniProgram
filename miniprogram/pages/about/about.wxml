@@ -1,0 +1,71 @@
+<view class="container">
+  <view class="header">
+    <image class="logo" src="/images/logo.png" mode="aspectFit"></image>
+    <text class="title">Sora视频生成</text>
+    <text class="subtitle">AI驱动的智能视频创作工具</text>
+  </view>
+
+  <!-- 简介 -->
+  <view class="section">
+    <view class="section-title">关于我们</view>
+    <text class="section-content">
+      Sora视频生成是一款基于OpenAI Sora技术的智能视频创作小程序。通过先进的AI技术，将你的文字描述转化为精美的视频内容。
+    </text>
+  </view>
+
+  <!-- 联系方式 -->
+  <view class="section">
+    <view class="section-title">联系我们</view>
+
+    <view class="contact-item">
+      <text class="contact-icon">📧</text>
+      <view class="contact-info">
+        <text class="contact-label">邮箱</text>
+        <text class="contact-value" selectable="true">support@sora-video.com</text>
+      </view>
+    </view>
+
+    <view class="contact-item">
+      <text class="contact-icon">📱</text>
+      <view class="contact-info">
+        <text class="contact-label">客服微信</text>
+        <text class="contact-value">SoraVideoSupport</text>
+      </view>
+    </view>
+
+    <view class="contact-item">
+      <text class="contact-icon">🌐</text>
+      <view class="contact-info">
+        <text class="contact-label">官方网站</text>
+        <text class="contact-value">www.sora-video.com</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 开发团队 -->
+  <view class="section">
+    <view class="section-title">开发团队</view>
+    <text class="section-content">
+      我们是一支热爱技术、追求创新的开发团队，致力于为用户提供最优质的AI视频创作体验。
+    </text>
+  </view>
+
+  <!-- 版本信息 -->
+  <view class="section">
+    <view class="section-title">版本信息</view>
+    <view class="version-info">
+      <text class="version-label">当前版本</text>
+      <text class="version-value">1.0.0</text>
+    </view>
+    <view class="version-info">
+      <text class="version-label">更新时间</text>
+      <text class="version-value">2026年1月</text>
+    </view>
+  </view>
+
+  <!-- 底部信息 -->
+  <view class="footer">
+    <text class="footer-text">Copyright © 2026 Sora视频生成团队</text>
+    <text class="footer-text">保留所有权利</text>
+  </view>
+</view>

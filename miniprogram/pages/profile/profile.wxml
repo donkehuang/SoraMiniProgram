@@ -1,0 +1,59 @@
+<view class="container">
+  <!-- 用户信息 -->
+  <view class="user-section">
+    <view class="user-info" wx:if="{{userInfo}}">
+      <image class="avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill"></image>
+      <view class="user-details">
+        <text class="nickname">{{userInfo.nickName}}</text>
+        <text class="user-id">已登录</text>
+      </view>
+    </view>
+    <view class="login-section" wx:else>
+      <image class="avatar-placeholder" src="/images/user-placeholder.png" mode="aspectFill"></image>
+      <text class="login-hint">点击登录，体验更多功能</text>
+      <button class="btn-login" open-type="getUserInfo" bindgetuserinfo="onGetUserInfo">
+        微信登录
+      </button>
+    </view>
+  </view>
+
+  <!-- 功能列表 -->
+  <view class="menu-section">
+    <view class="menu-item" bindtap="goToDocs">
+      <view class="menu-left">
+        <text class="menu-icon">📖</text>
+        <text class="menu-text">使用文档</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+
+    <view class="menu-item" bindtap="goToAbout">
+      <view class="menu-left">
+        <text class="menu-icon">ℹ️</text>
+        <text class="menu-text">关于我们</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+
+    <view class="menu-item" bindtap="goToTest">
+      <view class="menu-left">
+        <text class="menu-icon">🧪</text>
+        <text class="menu-text">云存储测试</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+
+    <view class="menu-item" bindtap="clearCache">
+      <view class="menu-left">
+        <text class="menu-icon">🗑️</text>
+        <text class="menu-text">清除缓存</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 版本信息 -->
+  <view class="version-section">
+    <text class="version-text">版本 1.0.0</text>
+  </view>
+</view>

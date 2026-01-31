@@ -1,0 +1,47 @@
+<view class="container">
+  <view class="header">
+    <text class="title">我的作品</text>
+    <text class="subtitle">查看所有生成的视频</text>
+  </view>
+
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <view class="empty-container" wx:if="{{!loading && videos.length === 0}}">
+    <image class="empty-icon" src="/images/empty.png" mode="aspectFit"></image>
+    <text class="empty-text">还没有作品</text>
+    <text class="empty-hint">去首页生成你的第一个视频吧</text>
+    <button class="btn-generate" bindtap="goToIndex">去生成视频</button>
+  </view>
+
+  <view class="video-list" wx:if="{{!loading && videos.length > 0}}">
+    <view class="video-card" wx:for="{{videos}}" wx:key="fileID" bindtap="playVideo" data-video="{{item}}">
+      <video
+        class="video-thumbnail"
+        src="{{item.httpURL}}"
+        poster="{{item.fileID}}"
+        show-center-play-btn="{{true}}"
+        show-play-btn="{{false}}"
+        controls="{{false}}"
+        object-fit="cover"
+      />
+      <view class="video-info">
+        <text class="video-title">{{item.name || '视频作品'}}</text>
+        <text class="video-date">{{item.date}}</text>
+      </view>
+      <view class="video-actions">
+        <button class="action-btn play" bindtap="playVideo" data-video="{{item}}" catchtap="">
+          ▶ 播放
+        </button>
+        <button class="action-btn download" bindtap="downloadVideo" data-video="{{item}}" catchtap="">
+          ⬇ 下载
+        </button>
+        <button class="action-btn share" open-type="share">
+          🔗 分享
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

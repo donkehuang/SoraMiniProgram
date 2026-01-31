@@ -1,0 +1,102 @@
+<view class="container">
+  <view class="header">
+    <text class="title">使用文档</text>
+  </view>
+
+  <view class="content">
+    <!-- 功能介绍 -->
+    <view class="section">
+      <view class="section-title">
+        <text>🎬 视频生成</text>
+      </view>
+      <text class="section-content">
+        在首页输入视频描述，选择视频时长（4秒/8秒/12秒），点击"生成视频"按钮，AI将自动为你生成视频。
+      </text>
+    </view>
+
+    <!-- 视频时长 -->
+    <view class="section">
+      <view class="section-title">
+        <text>⏱️ 视频时长选择</text>
+      </view>
+      <text class="section-content">
+        • 4秒：快速生成，适合短视频\n
+        • 8秒：中等时长，平衡质量和速度\n
+        • 12秒：长视频，内容更丰富\n
+        生成时间约为5分钟，请耐心等待。
+      </text>
+    </view>
+
+    <!-- 云存储 -->
+    <view class="section">
+      <view class="section-title">
+        <text>☁️ 云存储</text>
+      </view>
+      <text class="section-content">
+        生成的视频会自动上传到微信云存储，永久保存。你可以在"作品"页面查看所有生成的视频。
+      </text>
+    </view>
+
+    <!-- 视频管理 -->
+    <view class="section">
+      <view class="section-title">
+        <text>📁 作品管理</text>
+      </view>
+      <text class="section-content">
+        在"作品"页面可以：\n
+        • 查看所有生成的视频\n
+        • 在线播放视频\n
+        • 下载到本地\n
+        • 分享给好友
+      </text>
+    </view>
+
+    <!-- 登录功能 -->
+    <view class="section">
+      <view class="section-title">
+        <text>👤 用户登录</text>
+      </view>
+      <text class="section-content">
+        在"我的"页面点击"微信登录"，使用微信授权登录后可以体验更多功能。
+      </text>
+    </view>
+
+    <!-- 技术支持 -->
+    <view class="section">
+      <view class="section-title">
+        <text>⚙️ 技术说明</text>
+      </view>
+      <text class="section-content">
+        本小程序采用以下技术：\n
+        • 前端：微信小程序\n
+        • AI模型：OpenAI Sora\n
+        • 后端：Flask API\n
+        • 存储：微信云存储\n
+        • 视频：MP4格式，720x1280分辨率
+      </text>
+    </view>
+
+    <!-- 常见问题 -->
+    <view class="section">
+      <view class="section-title">
+        <text>❓ 常见问题</text>
+      </view>
+      <view class="faq-item">
+        <text class="faq-question">Q: 视频生成需要多久？</text>
+        <text class="faq-answer">A: 大约需要5分钟左右，请耐心等待。</text>
+      </view>
+      <view class="faq-item">
+        <text class="faq-question">Q: 如何下载视频？</text>
+        <text class="faq-answer">A: 在"作品"页面点击视频下方的"下载"按钮。</text>
+      </view>
+      <view class="faq-item">
+        <text class="faq-question">Q: 视频可以分享吗？</text>
+        <text class="faq-answer">A: 可以，点击"分享"按钮即可分享给好友。</text>
+      </view>
+      <view class="faq-item">
+        <text class="faq-question">Q: 生成失败怎么办？</text>
+        <text class="faq-answer">A: 请检查网络连接，或稍后重试。如持续失败，请联系客服。</text>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,6 +1,10 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/works/works",
+    "pages/profile/profile",
+    "pages/docs/docs",
+    "pages/about/about",
     "pages/test/test"
   ],
   "window": {
@@ -8,6 +12,26 @@
     "navigationBarBackgroundColor": "#fff",
     "navigationBarTitleText": "Sora视频生成",
     "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "color": "#666666",
+    "selectedColor": "#667eea",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/works/works",
+        "text": "作品"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
+    ]
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"
