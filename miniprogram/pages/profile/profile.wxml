@@ -9,7 +9,7 @@
       </view>
     </view>
     <view class="login-section" wx:else>
-      <image class="avatar-placeholder" src="/images/user-placeholder.png" mode="aspectFill"></image>
+      <view class="avatar-placeholder">👤</view>
       <text class="login-hint">点击登录，体验更多功能</text>
       <button class="btn-login" open-type="getUserInfo" bindgetuserinfo="onGetUserInfo">
         微信登录

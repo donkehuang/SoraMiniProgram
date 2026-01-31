@@ -1,6 +1,6 @@
 <view class="container">
   <view class="header">
-    <image class="logo" src="/images/logo.png" mode="aspectFit"></image>
+    <view class="logo">🎬</view>
     <text class="title">Sora视频生成</text>
     <text class="subtitle">AI驱动的智能视频创作工具</text>
   </view>

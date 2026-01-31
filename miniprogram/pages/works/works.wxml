@@ -10,7 +10,7 @@
   </view>
 
   <view class="empty-container" wx:if="{{!loading && videos.length === 0}}">
-    <image class="empty-icon" src="/images/empty.png" mode="aspectFit"></image>
+    <view class="empty-icon">📹</view>
     <text class="empty-text">还没有作品</text>
     <text class="empty-hint">去首页生成你的第一个视频吧</text>
     <button class="btn-generate" bindtap="goToIndex">去生成视频</button>
