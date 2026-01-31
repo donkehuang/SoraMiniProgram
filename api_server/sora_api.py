@@ -1,0 +1,352 @@
+from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask_cors import CORS
+from openai import OpenAI
+import time
+import os
+import logging
+import threading
+from pathlib import Path
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+
+app = Flask(__name__)
+# 允许跨域请求，支持所有来源和请求头
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
+
+# 配置 - 使用绝对路径避免路径问题
+VIDEOS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_videos")
+print(f"[配置] 视频存储目录: {VIDEOS_DIR}")
+Path(VIDEOS_DIR).mkdir(exist_ok=True)
+
+# 存储视频任务状态
+video_tasks = {}  # {video_id: {status, progress, local_path, error}}
+
+# 初始化OpenAI客户端
+# 增加超时时间：connect=120s, read=300s (5分钟)
+client = OpenAI(
+    api_key=os.environ.get('OPENAI_API_KEY', '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'),
+    timeout=300.0,  # 设置5分钟超时
+    max_retries=3,  # 最大重试次数
+    base_url="https://api.openai-proxy.com/v1"  # 使用代理API（如需要）
+)
+
+print(f"[配置] OpenAI客户端已初始化")
+print(f"[配置] API基础URL: {client.base_url}")
+print(f"[配置] 超时时间: {client.timeout}秒")
+
+def process_video_async(video_id, local_filename):
+    """异步处理视频生成和下载"""
+    try:
+        print(f"[异步处理] 开始处理视频: {video_id}")
+
+        # 轮询查询视频状态
+        bar_length = 30
+        while True:
+            video = client.videos.retrieve(video_id)
+            progress = getattr(video, "progress", 0)
+
+            filled_length = int((progress / 100) * bar_length)
+            bar = "=" * filled_length + "-" * (bar_length - filled_length)
+
+            status_map = {
+                'queued': '排队中',
+                'in_progress': '处理中',
+                'completed': '已完成',
+                'failed': '失败'
+            }
+            status_text = status_map.get(video.status, video.status)
+
+            # 更新任务状态
+            video_tasks[video_id].update({
+                'status': video.status,
+                'progress': progress
+            })
+            print(f"[进度] {status_text}: [{bar}] {progress:.1f}%")
+
+            if video.status in ("in_progress", "queued"):
+                time.sleep(3)
+            else:
+                break
+
+        if video.status == "failed":
+            error_message = getattr(
+                getattr(video, "error", None), "message", "视频生成失败"
+            )
+            print(f"[失败] {error_message}")
+            video_tasks[video_id].update({
+                'status': 'failed',
+                'error': error_message
+            })
+            return
+
+        # 视频生成完成，下载视频
+        print(f"[完成] 视频生成完成，开始下载...")
+        content = client.videos.download_content(video.id, variant="video")
+        local_path = os.path.join(VIDEOS_DIR, local_filename)
+        content.write_to_file(local_path)
+
+        print(f"[下载] 视频已保存到: {local_path}")
+
+        # 更新任务状态为完成
+        video_tasks[video_id].update({
+            'status': 'completed',
+            'progress': 100,
+            'local_path': local_path
+        })
+
+    except Exception as e:
+        print(f"[错误] 异步处理异常: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        video_tasks[video_id].update({
+            'status': 'failed',
+            'error': str(e)
+        })
+
+
+@app.route('/api/generate-video', methods=['POST', 'OPTIONS'])
+def generate_video():
+    """生成视频的API接口"""
+
+    # 处理预检请求
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        print(f"[请求] 收到视频生成请求")
+
+        data = request.json
+        if not data:
+            print("[错误] 请求数据为空")
+            return jsonify({
+                'success': False,
+                'error': '请求数据格式错误'
+            }), 400
+
+        prompt = data.get('prompt', '')
+        seconds = data.get('seconds', '12')
+
+        print(f"[参数] prompt: {prompt[:50]}..., seconds: {seconds}")
+
+        if not prompt:
+            print("[错误] prompt为空")
+            return jsonify({
+                'success': False,
+                'error': '请输入视频描述'
+            }), 400
+
+        print("[开始] 开始调用Sora API...")
+
+        # 调用Sora API创建视频（立即返回）
+        video = None
+        last_exc = None
+        for attempt in range(1, 4):
+            try:
+                video = client.videos.create(
+                    prompt=prompt,
+                    model="sora-2",
+                    seconds=seconds,
+                    size="720x1280"
+                )
+                print(f"[创建] 视频任务创建成功，视频ID: {video.id}")
+                break
+            except Exception as e:
+                last_exc = e
+                print(f"[警告] 视频创建失败 (尝试 {attempt}/3): {e}")
+                if attempt < 3:
+                    sleep_t = 2 ** (attempt - 1)
+                    print(f"[信息] {sleep_t}秒后重试...")
+                    time.sleep(sleep_t)
+
+        if video is None:
+            print(f"[失败] 视频创建失败: {str(last_exc)}")
+            return jsonify({
+                'success': False,
+                'error': f'视频创建失败: {str(last_exc)}'
+            }), 500
+
+        # 初始化任务状态
+        local_filename = f"{video.id}.mp4"
+        video_tasks[video.id] = {
+            'status': 'queued',
+            'progress': 0,
+            'local_path': None,
+            'error': None
+        }
+
+        # 启动异步处理线程
+        thread = threading.Thread(
+            target=process_video_async,
+            args=(video.id, local_filename),
+            daemon=True
+        )
+        thread.start()
+
+        # 立即返回任务ID（不等待完成）
+        response_data = {
+            'success': True,
+            'videoId': video.id,
+            'status': 'queued',
+            'message': '视频生成任务已创建'
+        }
+        print(f"[响应] 返回任务信息: {response_data}")
+
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        print(f"[错误] 服务器异常: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'服务器错误: {str(e)}'
+        }), 500
+
+
+@app.route('/api/video-status/<video_id>', methods=['GET'])
+def get_video_status(video_id):
+    """查询视频生成状态"""
+
+    try:
+        print(f"[查询] 查询视频状态: {video_id}")
+
+        if video_id not in video_tasks:
+            return jsonify({
+                'success': False,
+                'error': '视频任务不存在'
+            }), 404
+
+        task = video_tasks[video_id]
+
+        response_data = {
+            'success': True,
+            'videoId': video_id,
+            'status': task['status'],
+            'progress': task['progress']
+        }
+
+        # 如果完成，提供本地URL
+        if task['status'] == 'completed' and task['local_path']:
+            # 返回相对路径供前端访问
+            response_data['videoUrl'] = f'/videos/{video_id}.mp4'
+
+        # 如果失败，返回错误信息
+        if task['status'] == 'failed':
+            response_data['error'] = task.get('error', '视频生成失败')
+
+        print(f"[状态] 视频状态: {task['status']}, 进度: {task['progress']}%")
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        print(f"[错误] 查询状态异常: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'查询失败: {str(e)}'
+        }), 500
+
+
+@app.route('/videos/<filename>')
+def serve_video(filename):
+    """提供视频文件"""
+    try:
+        print(f"[视频服务] ============ 收到视频请求 ============")
+        print(f"[视频服务] 请求视频: {filename}")
+        print(f"[视频服务] 视频目录: {VIDEOS_DIR}")
+        print(f"[视频服务] 视频目录绝对路径: {os.path.abspath(VIDEOS_DIR)}")
+
+        # 列出目录中的所有文件
+        try:
+            all_files = os.listdir(VIDEOS_DIR)
+            print(f"[视频服务] 目录中的文件数量: {len(all_files)}")
+            if all_files:
+                print(f"[视频服务] 文件列表: {all_files[:5]}...")  # 只显示前5个
+        except Exception as e:
+            print(f"[视频服务] 读取目录失败: {e}")
+
+        # 检查文件是否存在
+        file_path = os.path.join(VIDEOS_DIR, filename)
+        file_path_abs = os.path.abspath(file_path)
+        print(f"[视频服务] 检查文件路径: {file_path_abs}")
+        print(f"[视频服务] 文件是否存在: {os.path.exists(file_path_abs)}")
+
+        if not os.path.exists(file_path_abs):
+            print(f"[视频服务] ❌ 文件不存在: {file_path_abs}")
+            return jsonify({'error': '视频文件不存在', 'requested': filename}), 404
+
+        file_size = os.path.getsize(file_path_abs)
+        print(f"[视频服务] ✅ 找到文件，大小: {file_size} 字节 ({file_size / 1024 / 1024:.2f} MB)")
+        print(f"[视频服务] 使用目录: {os.path.dirname(file_path_abs)}")
+
+        # 发送视频文件，使用绝对路径避免路径问题
+        try:
+            response = send_from_directory(
+                os.path.dirname(file_path_abs),
+                filename,
+                as_attachment=False,
+                mimetype='video/mp4'
+            )
+            print(f"[视频服务] ✅ 返回视频文件")
+            return response
+        except Exception as send_error:
+            print(f"[视频服务] send_from_directory失败: {send_error}")
+            print(f"[视频服务] 尝试直接读取文件并发送...")
+            # 备用方案：直接读取文件
+            return send_file(
+                file_path_abs,
+                mimetype='video/mp4',
+                as_attachment=False
+            )
+
+    except Exception as e:
+        print(f"[视频服务] ❌ 错误: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'服务器错误: {str(e)}'}), 500
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """健康检查接口"""
+    return jsonify({
+        'status': 'ok',
+        'active_tasks': len(video_tasks)
+    })
+
+
+@app.route('/api/tasks', methods=['GET'])
+def list_tasks():
+    """列出所有任务（调试用）"""
+    return jsonify({
+        'success': True,
+        'tasks': {k: {
+            'status': v['status'],
+            'progress': v['progress']
+        } for k, v in video_tasks.items()}
+    })
+
+
+if __name__ == '__main__':
+    print("=" * 60)
+    print("🚀 正在启动 Sora API 服务器...")
+    print("=" * 60)
+
+    port = int(os.environ.get('PORT', 5000))
+    print(f"📍 服务端口: {port}")
+    print(f"📁 视频存储目录: {os.path.abspath(VIDEOS_DIR)}")
+    print("=" * 60)
+
+    app.run(host='0.0.0.0', port=port, debug=True)

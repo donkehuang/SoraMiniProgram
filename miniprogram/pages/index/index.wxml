@@ -1,0 +1,94 @@
+<view class="container">
+  <view class="header">
+    <text class="title">Sora视频生成</text>
+    <text class="subtitle">输入关键词，AI生成视频</text>
+  </view>
+
+  <view class="input-section">
+    <textarea
+      class="prompt-input"
+      placeholder="请输入视频描述，例如：一只可爱的小猫在草地上奔跑..."
+      value="{{prompt}}"
+      bindinput="onPromptInput"
+      maxlength="500"
+      auto-height
+      disabled="{{isGenerating}}"
+    />
+    <text class="char-count">{{prompt.length}}/500</text>
+  </view>
+
+  <view class="settings-section" wx:if="{{!isGenerating}}">
+    <view class="setting-item">
+      <text class="setting-label">视频时长</text>
+      <picker mode="selector" range="{{durationOptions}}" value="{{durationIndex}}" bindchange="onDurationChange">
+        <view class="picker">{{durationOptions[durationIndex]}}</view>
+      </picker>
+    </view>
+  </view>
+
+  <button
+    class="generate-btn {{isGenerating ? 'disabled' : ''}}"
+    bindtap="generateVideo"
+    disabled="{{isGenerating}}"
+    wx:if="{{!isGenerating}}"
+  >
+    生成视频
+  </button>
+
+  <!-- 生成进度显示 -->
+  <view class="progress-section" wx:if="{{isGenerating}}">
+    <view class="progress-header">
+      <text class="progress-title">📹 视频生成中...</text>
+      <text class="progress-status">{{statusText}}</text>
+    </view>
+
+    <view class="progress-bar-container">
+      <view class="progress-bar-fill" style="width: {{generationProgress}}%"></view>
+    </view>
+
+    <!-- 上传状态 -->
+    <view class="upload-status" wx:if="{{isUploading}}">
+      <text class="upload-icon">☁️</text>
+      <text class="upload-text">正在上传到云存储...</text>
+    </view>
+
+    <text class="progress-info">⏱️ 预计需要5分钟，请耐心等待</text>
+
+    <button class="cancel-btn" bindtap="cancelGeneration" wx:if="{{!isUploading}}">取消生成</button>
+  </view>
+
+  <!-- 视频播放区域 -->
+  <view class="result-section" wx:if="{{videoUrl && !isGenerating}}">
+    <view class="result-header">
+      <text class="result-title">✅ 生成成功！</text>
+    </view>
+    <view class="video-info">
+      <text class="video-url">视频地址: {{videoUrl}}</text>
+    </view>
+    <video
+      class="video-player"
+      src="{{videoUrl}}"
+      controls
+      autoplay
+      bindplay="onVideoPlay"
+      binderror="onVideoError"
+      bindload="onVideoLoad"
+      show-center-play-btn="{{true}}"
+      show-play-btn="{{true}}"
+    />
+  </view>
+
+  <!-- 错误信息 -->
+  <view class="error-section" wx:if="{{errorMessage}}">
+    <text class="error-text">❌ {{errorMessage}}</text>
+  </view>
+
+  <!-- 测试入口 -->
+  <view class="test-section">
+    <button class="test-btn" bindtap="goToTest">
+      🧪 云存储测试
+    </button>
+  </view>
+</view>
+
+

@@ -1,0 +1,101 @@
+<view class="container">
+  <view class="header">
+    <text class="title">🧪 云存储测试</text>
+    <text class="subtitle">测试本地视频上传到微信云存储</text>
+  </view>
+
+  <view class="section">
+    <view class="section-title">
+      <text>1️⃣ 选择本地视频</text>
+    </view>
+    <button class="btn btn-primary" bindtap="selectVideo" disabled="{{isUploading}}">
+      {{selectedVideo ? '✅ 已选择视频' : '📁 选择本地视频'}}
+    </button>
+    <view wx:if="{{selectedVideo}}" class="info-box">
+      <text class="info-label">文件名:</text>
+      <text class="info-value">{{videoName}}</text>
+      <text class="info-label">文件大小:</text>
+      <text class="info-value">{{videoSize}}</text>
+    </view>
+  </view>
+
+  <view class="section" wx:if="{{selectedVideo}}">
+    <view class="section-title">
+      <text>2️⃣ 设置云存储路径</text>
+    </view>
+    <view class="input-group">
+      <text class="input-label">云文件夹:</text>
+      <input class="input" type="text" value="{{cloudPath}}" placeholder="test-videos" bindinput="onCloudPathInput" />
+    </view>
+  </view>
+
+  <view class="section" wx:if="{{selectedVideo}}">
+    <view class="section-title">
+      <text>3️⃣ 上传到微信云存储</text>
+    </view>
+    <button class="btn btn-success" bindtap="uploadToCloud" disabled="{{isUploading}}" wx:if="{{!uploadSuccess}}">
+      🚀 开始上传
+    </button>
+    <button class="btn btn-disabled" wx:else>
+      ✅ 上传成功
+    </button>
+
+    <!-- 上传进度 -->
+    <view wx:if="{{isUploading}}" class="progress-container">
+      <progress percent="{{uploadProgress}}" stroke-width="10" activeColor="#07c160" backgroundColor="#f0f0f0" />
+      <text class="progress-text">{{uploadProgress}}%</text>
+      <text class="progress-status">{{uploadStatus}}</text>
+    </view>
+  </view>
+
+  <!-- 上传结果 -->
+  <view class="section" wx:if="{{uploadSuccess}}">
+    <view class="section-title">
+      <text>✅ 上传成功</text>
+    </view>
+    <view class="result-box">
+      <text class="result-label">文件ID:</text>
+      <text class="result-value selectable">{{fileID}}</text>
+
+      <text class="result-label">云存储URL:</text>
+      <text class="result-value selectable break-word">{{cloudURL}}</text>
+
+      <text class="result-label">HTTP URL:</text>
+      <text class="result-value selectable break-word">{{httpURL}}</text>
+    </view>
+
+    <view class="video-preview">
+      <text class="preview-label">视频预览:</text>
+      <video class="video-player" src="{{httpURL}}" controls></video>
+    </view>
+
+    <button class="btn btn-info" bindtap="copyURL" data-url="{{httpURL}}">
+      📋 复制视频URL
+    </button>
+  </view>
+
+  <!-- 错误信息 -->
+  <view class="section" wx:if="{{errorMessage}}">
+    <view class="section-title error">
+      <text>❌ 错误</text>
+    </view>
+    <text class="error-message">{{errorMessage}}</text>
+    <button class="btn btn-warning" bindtap="reset">
+      🔄 重置测试
+    </button>
+  </view>
+
+  <!-- 使用说明 -->
+  <view class="section footer">
+    <view class="section-title">
+      <text>📖 使用说明</text>
+    </view>
+    <text class="instruction">
+      1. 点击"选择本地视频"从手机相册选择视频\n
+      2. 设置云存储的文件夹名称\n
+      3. 点击"开始上传"上传到微信云存储\n
+      4. 上传成功后会显示多种格式的URL\n
+      5. 可以直接播放预览视频
+    </text>
+  </view>
+</view>

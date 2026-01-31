@@ -1,0 +1,23 @@
+<view class="container">
+  <view class="header">
+    <text class="title">网络诊断工具</text>
+    <text class="subtitle">测试小程序与API服务器的连接</text>
+  </view>
+
+  <button class="test-btn" bindtap="testConnection">开始测试</button>
+
+  <view class="results-section" wx:if="{{testResults.length > 0}}">
+    <text class="results-title">测试结果：</text>
+    <view class="result-item" wx:for="{{testResults}}" wx:key="index">
+      <view class="result-title">{{item.title}}</view>
+      <text class="result-content">{{item.result}}</text>
+    </view>
+  </view>
+
+  <view class="tips-section">
+    <text class="tips-title">说明：</text>
+    <text class="tips-content">• 确保API服务器已启动 (python sora_api.py)</text>
+    <text class="tips-content">• API地址: http://localhost:5000</text>
+    <text class="tips-content">• 查看Console获取详细日志</text>
+  </view>
+</view>

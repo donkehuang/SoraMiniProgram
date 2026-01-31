@@ -1,0 +1,10 @@
+{
+  "name": "generateVideo",
+  "version": "1.0.0",
+  "description": "Sora视频生成云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "openai": "^4.0.0"
+  }
+}

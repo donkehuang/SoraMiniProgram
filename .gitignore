@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# 视频文件
+*.mp4
+*.avi
+*.mov
+*.mkv
+GeneratedVideos/
+generated_videos/
+VirtualPictures/
+RawPictures/
+
+# 微信小程序
+miniprogram/miniprogram_npm/
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志
+*.log
+run_log.txt
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# 微信小程序配置缓存
+.project.config.private.json
+
+# API密钥（如果文件中有）
+*.key
+.env
+.env.local
+
+# 其他
+ScriptsLists/
+*.md
+!README.md
