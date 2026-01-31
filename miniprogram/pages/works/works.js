@@ -21,28 +21,52 @@ Page({
     this.setData({ loading: true })
 
     try {
-      // 这里需要实现云数据库查询
-      // 暂时模拟数据
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const db = wx.cloud.database()
 
-      // TODO: 从云数据库查询视频列表
-      // const res = await wx.cloud.database().collection('videos').get()
-      
-      const mockVideos = []
+      // 从云数据库查询视频列表，按时间倒序
+      const res = await db.collection('videos')
+        .orderBy('createTime', 'desc')
+        .limit(20)
+        .get()
+
+      console.log('[作品] 查询结果:', res.data.length, '条')
+
+      // 格式化视频数据
+      const videos = res.data.map(item => ({
+        _id: item._id,
+        videoId: item.videoId,
+        fileID: item.fileID,
+        httpURL: item.httpURL,
+        name: item.prompt ? item.prompt.substring(0, 50) + (item.prompt.length > 50 ? '...' : '') : '视频作品',
+        date: item.date || new Date(item.timestamp).toLocaleDateString(),
+        duration: item.duration || '未知',
+        createTime: item.createTime
+      }))
 
       this.setData({
-        videos: mockVideos,
+        videos: videos,
         loading: false
       })
 
-      console.log('[作品] 加载完成，视频数量:', mockVideos.length)
+      console.log('[作品] 加载完成，视频数量:', videos.length)
 
     } catch (error) {
       console.error('[作品] 加载失败:', error)
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      })
+
+      // 如果是云数据库未配置，提示用户
+      if (error.errCode === -501001 || error.errMsg.includes('数据库')) {
+        wx.showToast({
+          title: '云数据库未配置',
+          icon: 'none',
+          duration: 2000
+        })
+      } else {
+        wx.showToast({
+          title: '加载失败',
+          icon: 'none'
+        })
+      }
+
       this.setData({ loading: false })
     }
   },
@@ -51,16 +75,20 @@ Page({
     const video = e.currentTarget.dataset.video
     console.log('[作品] 播放视频:', video)
 
-    // 跳转到视频播放页面或使用弹窗播放
-    // 暂时使用系统播放器
+    // 跳转到视频播放页面
     wx.navigateTo({
-      url: `/pages/player/player?url=${encodeURIComponent(video.httpURL)}&title=${video.name || '视频作品'}`
+      url: `/pages/player/player?url=${encodeURIComponent(video.httpURL)}&title=${encodeURIComponent(video.name || '视频作品')}&duration=${encodeURIComponent(video.duration || '12秒')}&date=${encodeURIComponent(video.date)}`
     })
   },
 
   downloadVideo(e) {
     const video = e.currentTarget.dataset.video
     console.log('[作品] 下载视频:', video)
+    console.log('[作品] 视频URL:', video.httpURL)
+
+    wx.showLoading({
+      title: '下载中...'
+    })
 
     wx.downloadFile({
       url: video.httpURL,
@@ -69,6 +97,7 @@ Page({
         wx.saveVideoToPhotosAlbum({
           filePath: res.tempFilePath,
           success: () => {
+            wx.hideLoading()
             wx.showToast({
               title: '已保存到相册',
               icon: 'success'
@@ -76,8 +105,9 @@ Page({
           },
           fail: (err) => {
             console.error('[作品] 保存失败:', err)
+            wx.hideLoading()
             wx.showToast({
-              title: '保存失败',
+              title: '保存失败，请检查相册权限',
               icon: 'none'
             })
           }
@@ -85,6 +115,7 @@ Page({
       },
       fail: (err) => {
         console.error('[作品] 下载失败:', err)
+        wx.hideLoading()
         wx.showToast({
           title: '下载失败',
           icon: 'none'

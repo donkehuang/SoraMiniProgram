@@ -5,6 +5,7 @@
     "pages/profile/profile",
     "pages/docs/docs",
     "pages/about/about",
+    "pages/player/player",
     "pages/test/test"
   ],
   "window": {

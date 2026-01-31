@@ -186,7 +186,11 @@ Page({
             console.log('[步骤2] fileID:', uploadResult.fileID)
             console.log('[步骤2] URL:', uploadResult.tempFileURL)
 
-            // 3. 使用云存储URL
+            // 3. 保存视频信息到云数据库
+            console.log('[步骤3] 保存视频信息到云数据库...')
+            await this.saveVideoToDatabase(videoId, uploadResult, timestamp)
+
+            // 4. 使用云存储URL
             this.setData({
               isGenerating: false,
               isUploading: false,
@@ -195,7 +199,7 @@ Page({
               statusText: '生成完成！'
             })
 
-            // 4. 清理本地临时文件
+            // 5. 清理本地临时文件
             wx.removeSavedFile({
               filePath: localPath,
               success: () => {
@@ -267,6 +271,53 @@ Page({
       generationProgress: 0,
       statusText: ''
     })
+  },
+
+  // 保存视频信息到云数据库
+  async saveVideoToDatabase(videoId, uploadResult, timestamp) {
+    try {
+      const db = wx.cloud.database()
+
+      // 获取当前用户信息（如果已登录）
+      const userInfo = wx.getStorageSync('userInfo') || {}
+
+      // 格式化日期
+      const date = new Date(timestamp)
+      const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+
+      const videoData = {
+        videoId: videoId,
+        prompt: this.data.prompt,
+        duration: this.data.durationOptions[this.data.durationIndex],
+        fileID: uploadResult.fileID,
+        httpURL: uploadResult.tempFileURL || uploadResult.fileID,
+        createTime: db.serverDate(),
+        date: dateStr,
+        timestamp: timestamp,
+        userInfo: userInfo.nickName ? {
+          nickName: userInfo.nickName,
+          avatarUrl: userInfo.avatarUrl
+        } : null
+      }
+
+      console.log('[数据库] 保存视频信息:', videoData)
+
+      // 保存到云数据库
+      const res = await db.collection('videos').add({
+        data: videoData
+      })
+
+      console.log('[数据库] 保存成功:', res._id)
+      console.log('[数据库] 视频信息已保存到云数据库')
+
+    } catch (error) {
+      console.error('[数据库] 保存失败:', error)
+      // 保存失败不影响视频生成流程，只是无法在作品页显示
+      wx.showToast({
+        title: '作品保存失败',
+        icon: 'none'
+      })
+    }
   },
 
   // 跳转到测试页面

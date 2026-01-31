@@ -1,0 +1,37 @@
+<view class="container">
+  <view class="video-container">
+    <video
+      class="video-player"
+      id="myVideo"
+      src="{{videoUrl}}"
+      controls
+      autoplay
+      show-center-play-btn="{{true}}"
+      show-play-btn="{{true}}"
+      object-fit="contain"
+      bindplay="onPlay"
+      bindpause="onPause"
+      bindtimeupdate="onTimeUpdate"
+      bindended="onEnded"
+      binderror="onError"
+      bindfullscreenchange="onFullscreenChange"
+    ></video>
+  </view>
+
+  <view class="info-section">
+    <text class="video-title">{{videoTitle}}</text>
+    <text class="video-info">{{videoDuration}} • {{videoDate}}</text>
+  </view>
+
+  <view class="action-section">
+    <button class="action-btn download" bindtap="downloadVideo">
+      ⬇ 下载视频
+    </button>
+    <button class="action-btn share" open-type="share">
+      🔗 分享视频
+    </button>
+    <button class="action-btn back" bindtap="goBack">
+      ← 返回作品
+    </button>
+  </view>
+</view>
