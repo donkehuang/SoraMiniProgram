@@ -1,10 +1,34 @@
 <view class="container">
-  <view class="header">
-    <text class="title">Sora视频生成</text>
-    <text class="subtitle">输入关键词，AI生成视频</text>
+  <!-- 背景视频 -->
+  <video 
+    wx:if="{{showBackgroundVideo}}"
+    class="background-video" 
+    src="{{backgroundVideoUrl}}" 
+    autoplay 
+    loop 
+    muted
+    show-center-play-btn="{{false}}"
+    show-play-btn="{{false}}"
+    show-fullscreen-btn="{{false}}"
+    controls="{{false}}"
+    objectFit="cover"
+    binderror="onBackgroundVideoError"
+    bindplay="onBackgroundVideoPlay"
+  ></video>
+  
+  <!-- 加载提示 -->
+  <view wx:if="{{!showBackgroundVideo && backgroundVideoLoading}}" class="video-loading">
+    <text>背景加载中...</text>
   </view>
+  
+  <!-- 内容层 -->
+  <view class="content-wrapper">
+    <view class="header">
+      <text class="title">Sora视频生成</text>
+      <text class="subtitle">输入关键词，AI生成视频</text>
+    </view>
 
-  <view class="input-section">
+    <view class="input-section">
     <textarea
       class="prompt-input"
       placeholder="请输入视频描述，例如：一只可爱的小猫在草地上奔跑..."
@@ -15,28 +39,28 @@
       disabled="{{isGenerating}}"
     />
     <text class="char-count">{{prompt.length}}/500</text>
-  </view>
+    </view>
 
-  <view class="settings-section" wx:if="{{!isGenerating}}">
+    <view class="settings-section" wx:if="{{!isGenerating}}">
     <view class="setting-item">
       <text class="setting-label">视频时长</text>
       <picker mode="selector" range="{{durationOptions}}" value="{{durationIndex}}" bindchange="onDurationChange">
         <view class="picker">{{durationOptions[durationIndex]}}</view>
       </picker>
     </view>
-  </view>
+    </view>
 
-  <button
+    <button
     class="generate-btn {{isGenerating ? 'disabled' : ''}}"
     bindtap="generateVideo"
     disabled="{{isGenerating}}"
     wx:if="{{!isGenerating}}"
-  >
-    生成视频
-  </button>
+    >
+      生成视频
+    </button>
 
-  <!-- 生成进度显示 -->
-  <view class="progress-section" wx:if="{{isGenerating}}">
+    <!-- 生成进度显示 -->
+    <view class="progress-section" wx:if="{{isGenerating}}">
     <view class="progress-header">
       <text class="progress-title">📹 视频生成中...</text>
       <text class="progress-status">{{statusText}}</text>
@@ -54,11 +78,11 @@
 
     <text class="progress-info">⏱️ 预计需要5分钟，请耐心等待</text>
 
-    <button class="cancel-btn" bindtap="cancelGeneration" wx:if="{{!isUploading}}">取消生成</button>
-  </view>
+      <button class="cancel-btn" bindtap="cancelGeneration" wx:if="{{!isUploading}}">取消生成</button>
+    </view>
 
-  <!-- 视频播放区域 -->
-  <view class="result-section" wx:if="{{videoUrl && !isGenerating}}">
+    <!-- 视频播放区域 -->
+    <view class="result-section" wx:if="{{videoUrl && !isGenerating}}">
     <view class="result-header">
       <text class="result-title">✅ 生成成功！</text>
     </view>
@@ -75,20 +99,15 @@
       bindload="onVideoLoad"
       show-center-play-btn="{{true}}"
       show-play-btn="{{true}}"
-    />
-  </view>
+      />
+    </view>
 
-  <!-- 错误信息 -->
-  <view class="error-section" wx:if="{{errorMessage}}">
-    <text class="error-text">❌ {{errorMessage}}</text>
-  </view>
-
-  <!-- 测试入口 -->
-  <view class="test-section">
-    <button class="test-btn" bindtap="goToTest">
-      🧪 云存储测试
-    </button>
+    <!-- 错误信息 -->
+    <view class="error-section" wx:if="{{errorMessage}}">
+      <text class="error-text">❌ {{errorMessage}}</text>
+    </view>
   </view>
 </view>
+
 
 

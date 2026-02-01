@@ -1,7 +1,40 @@
 .container {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* 背景视频 */
+.background-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  object-fit: cover;
+}
+
+/* 视频加载提示 */
+.video-loading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 28rpx;
+  text-align: center;
+}
+
+/* 内容层 */
+.content-wrapper {
+  position: relative;
+  z-index: 1;
   padding: 40rpx;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* 半透明遮罩，让背景视频可见 */
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .header {
@@ -24,11 +57,12 @@
 }
 
 .input-section {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 24rpx;
   padding: 32rpx;
   margin-bottom: 32rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10rpx);
 }
 
 .prompt-input {
@@ -48,11 +82,12 @@
 }
 
 .settings-section {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 24rpx;
   padding: 32rpx;
   margin-bottom: 32rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10rpx);
 }
 
 .setting-item {
@@ -97,11 +132,12 @@
 }
 
 .progress-section {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 24rpx;
   padding: 40rpx 32rpx;
   margin-bottom: 32rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10rpx);
 }
 
 .progress-header {
@@ -183,11 +219,12 @@
 }
 
 .result-section {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 24rpx;
   padding: 32rpx;
   margin-top: 32rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10rpx);
 }
 
 .result-header {
@@ -223,36 +260,16 @@
 }
 
 .error-section {
-  background: #fee;
+  background: rgba(255, 238, 238, 0.95);
   border-radius: 24rpx;
   padding: 32rpx;
   margin-top: 32rpx;
-  box-shadow: 0 8rpx 24rpx rgba(254, 85, 85, 0.2);
+  box-shadow: 0 8rpx 24rpx rgba(254, 85, 85, 0.3);
+  backdrop-filter: blur(10rpx);
 }
 
 .error-text {
   color: #c00;
   font-size: 28rpx;
   line-height: 1.6;
-}
-
-.test-section {
-  margin-top: 32rpx;
-}
-
-.test-btn {
-  width: 100%;
-  height: 80rpx;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  color: white;
-  font-size: 28rpx;
-  font-weight: bold;
-  border-radius: 40rpx;
-  border: none;
-  box-shadow: 0 8rpx 24rpx rgba(79, 172, 254, 0.4);
-  transition: all 0.3s;
-}
-
-.test-btn:active {
-  transform: scale(0.98);
 }

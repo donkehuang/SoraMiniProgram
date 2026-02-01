@@ -77,12 +77,6 @@ Page({
     })
   },
 
-  goToTest() {
-    wx.navigateTo({
-      url: '/pages/test/test'
-    })
-  },
-
   clearCache() {
     wx.showModal({
       title: '清除缓存',

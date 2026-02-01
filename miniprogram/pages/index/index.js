@@ -20,7 +20,47 @@ Page({
 
     // 云存储上传状态
     isUploading: false,
-    uploadProgress: 0
+    uploadProgress: 0,
+
+    // 背景视频 - 使用云存储（请将下面的 URL 替换为你的云存储 URL）
+    backgroundVideoUrl: 'https://636c-cloud1-2gd0041e12763b47-1401157928.tcb.qcloud.la/background/background.mp4?sign=9bf5ba795ce36ce41900bf2f984fcff8&t=1769920825',
+    showBackgroundVideo: true,
+    backgroundVideoLoading: true
+  },
+
+  onLoad() {
+    console.log('[页面加载] 首页加载完成')
+    console.log('[背景视频] 路径:', this.data.backgroundVideoUrl)
+    
+    // 设置背景视频加载超时
+    setTimeout(() => {
+      this.setData({
+        backgroundVideoLoading: false
+      })
+    }, 3000)
+  },
+
+  // 背景视频播放成功
+  onBackgroundVideoPlay(e) {
+    console.log('[背景视频] 播放成功')
+    this.setData({
+      showBackgroundVideo: true,
+      backgroundVideoLoading: false
+    })
+  },
+
+  // 背景视频加载错误
+  onBackgroundVideoError(e) {
+    console.error('[背景视频] 加载失败:', e.detail)
+    wx.showToast({
+      title: '背景视频加载失败',
+      icon: 'none',
+      duration: 2000
+    })
+    this.setData({
+      showBackgroundVideo: false,
+      backgroundVideoLoading: false
+    })
   },
 
   onPromptInput(e) {
