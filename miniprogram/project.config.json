@@ -1,7 +1,28 @@
 {
   "description": "Sora视频生成小程序",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "file",
+        "value": "assets/background.mp4"
+      },
+      {
+        "type": "folder",
+        "value": "assets"
+      },
+      {
+        "type": "suffix",
+        "value": ".md"
+      },
+      {
+        "type": "suffix",
+        "value": ".txt"
+      },
+      {
+        "type": "suffix",
+        "value": ".bak"
+      }
+    ],
     "include": []
   },
   "cloudbaseRoot": "../cloudfunctions/",

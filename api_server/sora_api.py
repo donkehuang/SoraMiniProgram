@@ -117,6 +117,90 @@ def process_video_async(video_id, local_filename):
         })
 
 
+@app.route('/api/optimize-prompt', methods=['POST', 'OPTIONS'])
+def optimize_prompt():
+    """使用GPT优化提示词"""
+    
+    # 处理预检请求
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    try:
+        print(f"[GPT优化] 收到提示词优化请求")
+        
+        data = request.json
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': '请求数据格式错误'
+            }), 400
+        
+        user_description = data.get('userDescription', '')
+        style_template = data.get('styleTemplate', '')
+        duration = data.get('duration', '4秒')
+        
+        print(f"[GPT优化] 用户描述: {user_description}")
+        print(f"[GPT优化] 风格模板: {style_template[:50]}...")
+        print(f"[GPT优化] 时长: {duration}")
+        
+        if not user_description or not style_template:
+            return jsonify({
+                'success': False,
+                'error': '缺少必要参数'
+            }), 400
+        
+        # 构建GPT优化提示
+        system_prompt = """You are a professional video script optimizer specialized in creating viral TikTok-style short videos. 
+Your task is to combine user's video description with a specific style template to generate an optimized, detailed video prompt for AI video generation.
+
+Guidelines:
+1. Maintain the style template's structure and key elements (timing, effects, transitions)
+2. Replace placeholder keywords in [brackets] with user's specific content
+3. Keep all technical specifications (duration, camera movements, effects)
+4. Ensure the output is cinematic, detailed, and generation-ready
+5. Output ONLY the optimized prompt, no explanations"""
+
+        user_prompt = f"""Style Template ({duration}):
+{style_template}
+
+User's Video Description:
+{user_description}
+
+Please generate an optimized video generation prompt by combining the style template with the user's description. Replace all [placeholders] with specific content from the user's description while maintaining the template's structure and technical specifications."""
+
+        print(f"[GPT优化] 开始调用GPT-4...")
+        
+        # 调用GPT进行优化
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+        
+        optimized_prompt = response.choices[0].message.content.strip()
+        
+        print(f"[GPT优化] 优化完成: {optimized_prompt[:100]}...")
+        
+        return jsonify({
+            'success': True,
+            'optimizedPrompt': optimized_prompt,
+            'originalDescription': user_description
+        }), 200
+        
+    except Exception as e:
+        print(f"[GPT优化] 错误: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'优化失败: {str(e)}'
+        }), 500
+
+
 @app.route('/api/generate-video', methods=['POST', 'OPTIONS'])
 def generate_video():
     """生成视频的API接口"""
@@ -138,8 +222,9 @@ def generate_video():
 
         prompt = data.get('prompt', '')
         seconds = data.get('seconds', '12')
+        size = data.get('size', '1280x720')  # 新增：视频分辨率参数，默认横屏
 
-        print(f"[参数] prompt: {prompt[:50]}..., seconds: {seconds}")
+        print(f"[参数] prompt: {prompt[:50]}..., seconds: {seconds}, size: {size}")
 
         if not prompt:
             print("[错误] prompt为空")
@@ -159,7 +244,7 @@ def generate_video():
                     prompt=prompt,
                     model="sora-2",
                     seconds=seconds,
-                    size="720x1280"
+                    size=size  # 使用传入的分辨率参数
                 )
                 print(f"[创建] 视频任务创建成功，视频ID: {video.id}")
                 break

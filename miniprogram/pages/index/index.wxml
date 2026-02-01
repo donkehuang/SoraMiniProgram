@@ -1,7 +1,7 @@
 <view class="container">
   <!-- 背景视频 -->
   <video 
-    wx:if="{{showBackgroundVideo}}"
+    wx:if="{{showBackgroundVideo && backgroundVideoUrl}}"
     class="background-video" 
     src="{{backgroundVideoUrl}}" 
     autoplay 
@@ -24,40 +24,109 @@
   <!-- 内容层 -->
   <view class="content-wrapper">
     <view class="header">
-      <text class="title">Sora视频生成</text>
-      <text class="subtitle">输入关键词，AI生成视频</text>
+      <text class="title">Sora AI 创作</text>
+      <text class="subtitle">文字生视频 · 专业创作工具</text>
     </view>
 
-    <view class="input-section">
-    <textarea
-      class="prompt-input"
-      placeholder="请输入视频描述，例如：一只可爱的小猫在草地上奔跑..."
-      value="{{prompt}}"
-      bindinput="onPromptInput"
-      maxlength="500"
-      auto-height
-      disabled="{{isGenerating}}"
-    />
-    <text class="char-count">{{prompt.length}}/500</text>
+    <!-- 主界面：显示功能卡片 -->
+    <view class="main-view" wx:if="{{!showCreateView && !isGenerating}}">
+      <!-- 卡片1：立即进入创作（大卡片） -->
+      <view class="card card-create" bindtap="enterCreate">
+        <view class="card-icon">🎬</view>
+        <view class="card-content">
+          <view class="card-title">立即进入创作</view>
+          <view class="card-desc">输入提示词，生成专业视频</view>
+        </view>
+      </view>
+
+      <!-- 小卡片容器 -->
+      <view class="small-cards-row">
+        <!-- 卡片2：生图 -->
+        <view class="card card-small" bindtap="enterImageGen">
+          <view class="card-icon-small">🖼️</view>
+          <view class="card-small-content">
+            <view class="card-title-small">生图</view>
+            <view class="card-desc-small">即将上线</view>
+          </view>
+        </view>
+
+        <!-- 卡片3：修改提示词 -->
+        <view class="card card-small" bindtap="enterPromptEdit">
+          <view class="card-icon-small">✏️</view>
+          <view class="card-small-content">
+            <view class="card-title-small">提示词优化</view>
+            <view class="card-desc-small">即将上线</view>
+          </view>
+        </view>
+      </view>
     </view>
 
-    <view class="settings-section" wx:if="{{!isGenerating}}">
-    <view class="setting-item">
-      <text class="setting-label">视频时长</text>
-      <picker mode="selector" range="{{durationOptions}}" value="{{durationIndex}}" bindchange="onDurationChange">
-        <view class="picker">{{durationOptions[durationIndex]}}</view>
-      </picker>
-    </view>
-    </view>
+    <!-- 创作界面：显示输入表单 -->
+    <view class="create-view" wx:if="{{showCreateView && !isGenerating}}">
+      <!-- 返回按钮 -->
+      <view class="back-btn" bindtap="backToMain">
+        <text class="back-icon">←</text>
+        <text class="back-text">返回</text>
+      </view>
 
-    <button
-    class="generate-btn {{isGenerating ? 'disabled' : ''}}"
-    bindtap="generateVideo"
-    disabled="{{isGenerating}}"
-    wx:if="{{!isGenerating}}"
-    >
-      生成视频
-    </button>
+      <!-- 输入区域 -->
+      <view class="input-section">
+        <view class="input-label">
+          <text class="label-icon">📝</text>
+          <text class="label-text">视频描述</text>
+        </view>
+        <textarea
+          class="prompt-input"
+          placeholder="请输入视频描述，例如：一只可爱的小猫在草地上奔跑..."
+          value="{{prompt}}"
+          bindinput="onPromptInput"
+          maxlength="500"
+          auto-height
+        />
+        <text class="char-count">{{prompt.length}}/500</text>
+      </view>
+
+      <!-- 设置区域 -->
+      <view class="settings-section">
+        <!-- 视频时长 -->
+        <view class="setting-item">
+          <view class="setting-label">
+            <text class="setting-icon">⏱️</text>
+            <text class="setting-text">视频时长</text>
+          </view>
+          <picker mode="selector" range="{{durationOptions}}" value="{{durationIndex}}" bindchange="onDurationChange">
+            <view class="picker">{{durationOptions[durationIndex]}}</view>
+          </picker>
+        </view>
+
+        <!-- 视频方向 -->
+        <view class="setting-item">
+          <view class="setting-label">
+            <text class="setting-icon">📐</text>
+            <text class="setting-text">视频方向</text>
+          </view>
+          <picker mode="selector" range="{{orientationOptions}}" value="{{orientationIndex}}" bindchange="onOrientationChange">
+            <view class="picker">{{orientationOptions[orientationIndex]}}</view>
+          </picker>
+        </view>
+
+        <!-- 预设风格 -->
+        <view class="setting-item">
+          <view class="setting-label">
+            <text class="setting-icon">🎨</text>
+            <text class="setting-text">预设风格</text>
+          </view>
+          <picker mode="selector" range="{{styleOptions}}" value="{{styleIndex}}" bindchange="onStyleChange">
+            <view class="picker">{{styleOptions[styleIndex]}}</view>
+          </picker>
+        </view>
+      </view>
+
+      <!-- 生成按钮 -->
+      <button class="generate-btn" bindtap="generateVideo">
+        🚀 开始生成
+      </button>
+    </view>
 
     <!-- 生成进度显示 -->
     <view class="progress-section" wx:if="{{isGenerating}}">

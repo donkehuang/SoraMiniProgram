@@ -1,14 +1,21 @@
-# Windows
-[Dd]esktop.ini
-Thumbs.db
-$RECYCLE.BIN/
+# 微信小程序 gitignore
 
-# macOS
+# 不需要打包的大文件
+assets/background.mp4
+
+# 文档文件（不需要打包到小程序）
+*.md
+*.txt
+
+# 备份文件
+*.bak
+
+# 开发工具生成
+project.private.config.json
+
+# 云函数
+cloudfunctions/
+
+# 临时文件
 .DS_Store
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-
-# Node.js
-node_modules/
+Thumbs.db
