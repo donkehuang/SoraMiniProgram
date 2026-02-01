@@ -1,13 +1,20 @@
 <view class="container">
-  <view class="video-container">
+  <!-- 返回按钮 - 左上角 -->
+  <view class="back-btn" bindtap="goBack">
+    <text class="back-icon">←</text>
+  </view>
+
+  <!-- 视频播放器 -->
+  <view class="video-container" bindtap="togglePlay">
     <video
       class="video-player"
       id="myVideo"
       src="{{videoUrl}}"
-      controls
       autoplay
-      show-center-play-btn="{{true}}"
-      show-play-btn="{{true}}"
+      show-center-play-btn="{{false}}"
+      show-play-btn="{{false}}"
+      show-progress="{{false}}"
+      controls="{{false}}"
       object-fit="contain"
       bindplay="onPlay"
       bindpause="onPause"
@@ -18,20 +25,33 @@
     ></video>
   </view>
 
+  <!-- 底部信息栏 -->
   <view class="info-section">
-    <text class="video-title">{{videoTitle}}</text>
-    <text class="video-info">{{videoDuration}} • {{videoDate}}</text>
-  </view>
-
-  <view class="action-section">
-    <button class="action-btn download" bindtap="downloadVideo">
-      ⬇ 下载视频
-    </button>
-    <button class="action-btn share" open-type="share">
-      🔗 分享视频
-    </button>
-    <button class="action-btn back" bindtap="goBack">
-      ← 返回作品
-    </button>
+    <!-- Prompt显示区域 -->
+    <view class="prompt-section" wx:if="{{videoPrompt}}">
+      <view class="prompt-content" bindtap="togglePrompt">
+        <text class="prompt-text" wx:if="{{!promptExpanded}}">{{promptPreview}}</text>
+        <text class="prompt-text expanded" wx:if="{{promptExpanded}}">{{videoPrompt}}</text>
+        <view class="expand-btn" wx:if="{{showExpandBtn}}">
+          <text class="expand-icon">{{promptExpanded ? '▲' : '▼'}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 视频元信息 -->
+    <view class="meta-info">
+      <text class="meta-text">{{videoDuration}} • {{videoDate}}</text>
+    </view>
+    
+    <!-- 进度条 -->
+    <view class="progress-bar-wrapper">
+      <view class="progress-bar">
+        <view class="progress-fill" style="width: {{progressPercent}}%"></view>
+      </view>
+      <view class="progress-time">
+        <text class="time-current">{{currentTimeStr}}</text>
+        <text class="time-total">{{durationStr}}</text>
+      </view>
+    </view>
   </view>
 </view>
