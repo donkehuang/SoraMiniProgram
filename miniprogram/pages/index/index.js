@@ -222,6 +222,26 @@ Page({
       return
     }
 
+    // 检查登录状态
+    const userInfo = wx.getStorageSync('userInfo')
+    if (!userInfo || !userInfo.nickName) {
+      wx.showModal({
+        title: '需要登录',
+        content: '请先登录后再生成视频，以便保存您的作品',
+        confirmText: '去登录',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            // 跳转到"我的"页面登录
+            wx.switchTab({
+              url: '/pages/profile/profile'
+            })
+          }
+        }
+      })
+      return
+    }
+
     // 清除之前的错误信息
     this.setData({
       errorMessage: '',
@@ -545,8 +565,13 @@ Page({
     try {
       const db = wx.cloud.database()
 
-      // 获取当前用户信息（如果已登录）
-      const userInfo = wx.getStorageSync('userInfo') || {}
+      // 获取当前用户信息
+      const userInfo = wx.getStorageSync('userInfo')
+      
+      // 再次检查登录状态（双重保险）
+      if (!userInfo || !userInfo.nickName) {
+        throw new Error('用户未登录，无法保存作品')
+      }
 
       // 格式化日期
       const date = new Date(timestamp)
@@ -560,25 +585,25 @@ Page({
         videoId: videoId,                           // Sora视频ID
         prompt: this.data.prompt,                   // 提示词
         duration: this.data.durationOptions[this.data.durationIndex],  // 时长
-        size: size,                                 // 分辨率（新增）
-        orientation: orientation,                   // 方向（新增）
+        size: size,                                 // 分辨率
+        orientation: orientation,                   // 方向
         fileID: uploadResult.fileID,               // 云存储文件ID
         httpURL: uploadResult.tempFileURL || uploadResult.fileID,  // 临时URL
         status: 'completed',                        // 状态
         createTime: db.serverDate(),               // 服务器时间
         date: dateStr,                             // 日期字符串
         timestamp: timestamp,                       // 时间戳
-        userInfo: userInfo.nickName ? {
+        userInfo: {
           nickName: userInfo.nickName,
           avatarUrl: userInfo.avatarUrl
-        } : null,
+        },
         viewCount: 0,                              // 查看次数
         likeCount: 0                               // 点赞次数
       }
 
       console.log('[数据库] 保存视频信息:', videoData)
 
-      // 保存到云数据库
+      // 保存到云数据库（自动添加 _openid）
       const res = await db.collection('videos').add({
         data: videoData
       })
@@ -588,11 +613,33 @@ Page({
 
     } catch (error) {
       console.error('[数据库] 保存失败:', error)
-      // 保存失败不影响视频生成流程，只是无法在作品页显示
-      wx.showToast({
-        title: '作品保存失败',
-        icon: 'none'
-      })
+      
+      // 如果是权限错误，提示用户登录
+      if (error.errCode === -502003 || error.message.includes('permission denied')) {
+        wx.showModal({
+          title: '保存失败',
+          content: '数据库权限不足，请退出重新登录',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              // 清除登录信息
+              wx.removeStorageSync('userInfo')
+              // 跳转到登录页
+              wx.switchTab({
+                url: '/pages/profile/profile'
+              })
+            }
+          }
+        })
+      } else {
+        // 其他错误
+        wx.showToast({
+          title: '作品保存失败',
+          icon: 'none'
+        })
+      }
+      
+      throw error  // 重新抛出错误，让上层处理
     }
   },
 
