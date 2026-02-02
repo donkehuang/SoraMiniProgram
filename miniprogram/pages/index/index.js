@@ -429,16 +429,34 @@ Page({
             console.log('[步骤3] 保存视频信息到云数据库...')
             await this.saveVideoToDatabase(videoId, uploadResult, timestamp)
 
-            // 4. 使用云存储URL
+            // 4. 标记完成（不显示视频）
             this.setData({
               isGenerating: false,
               isUploading: false,
-              videoUrl: uploadResult.tempFileURL,
+              videoUrl: '',  // 不显示视频
               generationProgress: 100,
-              statusText: '生成完成！'
+              statusText: '生成完成！视频已保存到作品'
             })
 
-            // 5. 清理本地临时文件
+            // 5. 显示成功提示并返回主界面
+            wx.showToast({
+              title: '已保存到作品',
+              icon: 'success',
+              duration: 2000
+            })
+
+            // 延迟1秒后返回主界面
+            setTimeout(() => {
+              this.setData({
+                showCreateView: false,
+                prompt: '',
+                isGenerating: false,
+                generationProgress: 0,
+                statusText: ''
+              })
+            }, 2000)
+
+            // 6. 清理本地临时文件
             wx.removeSavedFile({
               filePath: localPath,
               success: () => {
@@ -482,6 +500,16 @@ Page({
 
       } catch (error) {
         console.error('[错误] 状态查询失败:', error)
+
+        // 如果是404错误（任务不存在），说明服务器重启了，标记为失败
+        if (error.message && error.message.includes('视频任务不存在')) {
+          console.error('[错误] 服务器重启，任务丢失')
+          this.setData({
+            isGenerating: false,
+            errorMessage: '服务器重启，请重新生成视频'
+          })
+          return
+        }
 
         // 如果不是正在生成，停止轮询
         if (this.data.currentVideoId !== videoId) {
