@@ -1,46 +1,53 @@
 <view class="container">
+  <!-- 渐变背景 -->
+  <view class="gradient-bg"></view>
+  
+  <!-- 头部 -->
   <view class="header">
-    <text class="title">我的作品</text>
-    <text class="subtitle">查看所有生成的视频</text>
+    <view class="header-content">
+      <text class="title">我的作品</text>
+      <text class="subtitle">共 {{videos.length}} 个作品</text>
+    </view>
+    <view class="header-icon">🎬</view>
   </view>
 
+  <!-- 加载状态 -->
   <view class="loading-container" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
     <text class="loading-text">加载中...</text>
   </view>
 
+  <!-- 空状态 -->
   <view class="empty-container" wx:if="{{!loading && videos.length === 0}}">
-    <view class="empty-icon">📹</view>
+    <view class="empty-illustration">
+      <view class="empty-circle">
+        <text class="empty-icon">🎥</text>
+      </view>
+    </view>
     <text class="empty-text">还没有作品</text>
-    <text class="empty-hint">去首页生成你的第一个视频吧</text>
-    <button class="btn-generate" bindtap="goToIndex">去生成视频</button>
+    <text class="empty-hint">开始创作你的第一个AI视频</text>
+    <button class="btn-generate" bindtap="goToIndex">
+      <text class="btn-icon">✨</text>
+      <text class="btn-text">立即创作</text>
+    </button>
   </view>
 
-  <view class="video-list" wx:if="{{!loading && videos.length > 0}}">
+  <!-- 视频网格 -->
+  <view class="video-grid" wx:if="{{!loading && videos.length > 0}}">
     <view class="video-card" wx:for="{{videos}}" wx:key="fileID" bindtap="playVideo" data-video="{{item}}">
-      <video
-        class="video-thumbnail"
-        src="{{item.httpURL}}"
-        poster="{{item.fileID}}"
-        show-center-play-btn="{{true}}"
-        show-play-btn="{{false}}"
-        controls="{{false}}"
-        object-fit="cover"
-      />
-      <view class="video-info">
-        <text class="video-title">{{item.name || '视频作品'}}</text>
-        <text class="video-date">{{item.date}}</text>
-      </view>
-      <view class="video-actions">
-        <button class="action-btn play" bindtap="playVideo" data-video="{{item}}" catchtap="">
-          ▶ 播放
-        </button>
-        <button class="action-btn download" bindtap="downloadVideo" data-video="{{item}}" catchtap="">
-          ⬇ 下载
-        </button>
-        <button class="action-btn share" open-type="share">
-          🔗 分享
-        </button>
+      <!-- 视频缩略图容器 -->
+      <view class="video-thumbnail-wrapper">
+        <video
+          class="video-thumbnail"
+          src="{{item.httpURL}}"
+          show-center-play-btn="{{false}}"
+          show-play-btn="{{false}}"
+          controls="{{false}}"
+          enable-play-gesture="{{false}}"
+          object-fit="cover"
+        />
+        <!-- 日期标签 - 右上角 -->
+        <view class="date-tag">{{item.date}}</view>
       </view>
     </view>
   </view>

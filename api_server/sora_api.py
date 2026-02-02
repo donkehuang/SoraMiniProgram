@@ -6,6 +6,10 @@ import os
 import logging
 import threading
 from pathlib import Path
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 # 配置日志
 logging.basicConfig(
@@ -35,12 +39,18 @@ Path(VIDEOS_DIR).mkdir(exist_ok=True)
 video_tasks = {}  # {video_id: {status, progress, local_path, error}}
 
 # 初始化OpenAI客户端
-# 增加超时时间：connect=120s, read=300s (5分钟)
+# 从环境变量读取API Key
+api_key = os.getenv('OPENAI_API_KEY')
+if not api_key:
+    raise ValueError("未设置 OPENAI_API_KEY 环境变量！请在 .env 文件中配置")
+
+base_url = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
+
 client = OpenAI(
-    api_key=os.environ.get('OPENAI_API_KEY', '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'),
+    api_key=api_key,
     timeout=300.0,  # 设置5分钟超时
     max_retries=3,  # 最大重试次数
-    base_url="https://api.openai-proxy.com/v1"  # 使用代理API（如需要）
+    base_url=base_url
 )
 
 print(f"[配置] OpenAI客户端已初始化")
@@ -222,7 +232,7 @@ def generate_video():
 
         prompt = data.get('prompt', '')
         seconds = data.get('seconds', '12')
-        size = data.get('size', '1280x720')  # 新增：视频分辨率参数，默认横屏
+        size = data.get('size', '1280x720')
 
         print(f"[参数] prompt: {prompt[:50]}..., seconds: {seconds}, size: {size}")
 
@@ -244,7 +254,7 @@ def generate_video():
                     prompt=prompt,
                     model="sora-2",
                     seconds=seconds,
-                    size=size  # 使用传入的分辨率参数
+                    size=size
                 )
                 print(f"[创建] 视频任务创建成功，视频ID: {video.id}")
                 break
@@ -430,8 +440,11 @@ if __name__ == '__main__':
     print("=" * 60)
 
     port = int(os.environ.get('PORT', 5000))
+    debug_mode = os.environ.get('DEBUG', 'False').lower() == 'true'
+    
     print(f"📍 服务端口: {port}")
     print(f"📁 视频存储目录: {os.path.abspath(VIDEOS_DIR)}")
+    print(f"🔧 调试模式: {debug_mode}")
     print("=" * 60)
 
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

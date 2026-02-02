@@ -17,7 +17,7 @@ build/
 *.mov
 *.mkv
 GeneratedVideos/
-generated_videos/
+generated_videos/*.mp4
 VirtualPictures/
 RawPictures/
 
@@ -52,5 +52,8 @@ Thumbs.db
 
 # 其他
 ScriptsLists/
-*.md
+# 文档文件（根目录的临时 md 文件，但保留重要文档）
+/*.md
 !README.md
+!api_server/DEPLOY.md
+!api_server/*.md

@@ -41,6 +41,7 @@ Page({
         fileID: item.fileID,
         httpURL: item.tempFileURL || item.httpURL, // 优先使用新的临时链接
         name: item.prompt ? item.prompt.substring(0, 50) + (item.prompt.length > 50 ? '...' : '') : '视频作品',
+        prompt: item.prompt || '', // 完整prompt
         date: item.date || new Date(item.timestamp).toLocaleDateString(),
         duration: item.duration || '未知',
         createTime: item.createTime
@@ -114,6 +115,7 @@ Page({
         fileID: item.fileID,
         httpURL: urlMap[item.fileID] || item.httpURL, // 使用新的临时链接
         name: item.prompt ? item.prompt.substring(0, 50) + (item.prompt.length > 50 ? '...' : '') : '视频作品',
+        prompt: item.prompt || '', // 完整prompt
         date: item.date || new Date(item.timestamp).toLocaleDateString(),
         duration: item.duration || '未知',
         createTime: item.createTime
@@ -140,9 +142,9 @@ Page({
     const video = e.currentTarget.dataset.video
     console.log('[作品] 播放视频:', video)
 
-    // 跳转到视频播放页面
+    // 跳转到视频播放页面，传递prompt
     wx.navigateTo({
-      url: `/pages/player/player?url=${encodeURIComponent(video.httpURL)}&title=${encodeURIComponent(video.name || '视频作品')}&duration=${encodeURIComponent(video.duration || '12秒')}&date=${encodeURIComponent(video.date)}`
+      url: `/pages/player/player?url=${encodeURIComponent(video.httpURL)}&duration=${encodeURIComponent(video.duration || '12秒')}&date=${encodeURIComponent(video.date)}&prompt=${encodeURIComponent(video.prompt || video.name || '')}`
     })
   },
 

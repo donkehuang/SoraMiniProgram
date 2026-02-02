@@ -7,7 +7,7 @@ Page({
     durationOptions: ['4秒', '8秒', '12秒'],
     durationIndex: 0,
     orientationOptions: ['横屏 16:9', '竖屏 9:16'],
-    orientationIndex: 0,
+    orientationIndex: 1,  // 默认竖屏
     loading: false,
     videoUrl: '',
     errorMessage: '',

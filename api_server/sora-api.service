@@ -1,0 +1,16 @@
+[Unit]
+Description=Sora API Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/path/to/your/api_server
+Environment="PATH=/path/to/your/api_server/venv/bin"
+EnvironmentFile=/path/to/your/api_server/.env
+ExecStart=/path/to/your/api_server/venv/bin/gunicorn -w 4 -b 0.0.0.0:5000 --timeout 600 sora_api:app
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

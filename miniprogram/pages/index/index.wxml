@@ -124,7 +124,7 @@
 
       <!-- 生成按钮 -->
       <button class="generate-btn" bindtap="generateVideo">
-        🚀 开始生成
+        开始生成
       </button>
     </view>
 
