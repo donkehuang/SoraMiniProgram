@@ -49,6 +49,11 @@ Thumbs.db
 *.key
 .env
 .env.local
+.env.*
+*_env_*.sh
+test_openai*.py
+api_server/.env
+api_server/.env.*
 
 # 其他
 ScriptsLists/
