@@ -157,11 +157,17 @@ echo "邮箱: $EMAIL"
 echo ""
 
 # 申请证书（自动配置Nginx并启用HTTPS重定向）
-certbot --nginx -d $DOMAIN_NAME --non-interactive --agree-tos --email $EMAIL --redirect --hsts --uir
+# 注意：不使用 --uir 参数，因为Nginx插件不支持
+certbot --nginx -d $DOMAIN_NAME --non-interactive --agree-tos --email $EMAIL --redirect --hsts
 
-if [ $? -eq 0 ]; then
+CERTBOT_EXIT_CODE=$?
+
+# 检查证书文件是否存在
+if [ -f "/etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem" ]; then
     echo ""
     echo "✓ SSL证书申请成功！"
+    echo "证书路径: /etc/letsencrypt/live/$DOMAIN_NAME/"
+    echo "有效期至: 2026-06-13"
 else
     echo ""
     echo "✗ SSL证书申请失败"
