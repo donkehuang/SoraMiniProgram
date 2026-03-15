@@ -11,7 +11,7 @@ Page({
     loading: false,
     videoUrl: '',
     errorMessage: '',
-    apiBaseUrl: 'http://8.211.175.227:5000', // API服务器地址（阿里云公网IP）
+    apiBaseUrl: 'https://www.enfuri51.xyz', // API服务器地址（HTTPS域名）
 
     // 界面状态
     showCreateView: false, // 是否显示创作界面
