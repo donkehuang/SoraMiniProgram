@@ -441,10 +441,14 @@ if __name__ == '__main__':
 
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('DEBUG', 'False').lower() == 'true'
+    domain = os.environ.get('DOMAIN', 'www.enfuri51.xyz')
     
     print(f"📍 服务端口: {port}")
+    print(f"🌐 HTTPS域名: https://{domain}")
     print(f"📁 视频存储目录: {os.path.abspath(VIDEOS_DIR)}")
     print(f"🔧 调试模式: {debug_mode}")
+    print("=" * 60)
+    print(f"✅ API地址: https://{domain}/api/health")
     print("=" * 60)
 
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
