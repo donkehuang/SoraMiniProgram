@@ -25,9 +25,9 @@
     ],
     "include": []
   },
-  "cloudbaseRoot": "../cloudfunctions/",
-  "cloudfunctionTemplateRoot": "../cloudfunctions/",
-  "cloudfunctionRoot": "../cloudfunctions/",
+  "cloudbaseRoot": "cloudfunctions/",
+  "cloudfunctionTemplateRoot": "cloudfunctions/",
+  "cloudfunctionRoot": "cloudfunctions/",
   "cloudbase": {
     "env": "cloud1-2gd0041e12763b47"
   },
