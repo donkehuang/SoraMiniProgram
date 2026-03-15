@@ -248,9 +248,21 @@ Page({
       videoUrl: ''
     })
 
+    // 显示调试信息：API地址
+    console.log('===========================================')
+    console.log('[调试] API地址:', apiBaseUrl)
+    const networkType = await this.getNetworkType()
+    console.log('[调试] 网络类型:', networkType)
+    console.log('===========================================')
+
+    // 保存调试信息到data，用于界面显示
+    this.setData({
+      debugNetworkType: networkType
+    })
+
     try {
       const duration = durationOptions[durationIndex].replace('秒', '')
-      
+
       // 根据方向设置分辨率
       const size = orientationIndex === 0 ? '1280x720' : '720x1280' // 0=横屏, 1=竖屏
 
@@ -280,6 +292,7 @@ Page({
 
       // 调用GPT优化API
       const optimizeResult = await new Promise((resolve, reject) => {
+        console.log('[优化] 请求URL:', `${apiBaseUrl}/api/optimize-prompt`)
         wx.request({
           url: `${apiBaseUrl}/api/optimize-prompt`,
           method: 'POST',
@@ -291,8 +304,17 @@ Page({
           header: {
             'content-type': 'application/json'
           },
-          success: resolve,
-          fail: reject
+          success: (res) => {
+            console.log('[优化] API响应状态码:', res.statusCode)
+            console.log('[优化] API响应数据:', res.data)
+            this.setData({ statusText: `GPT优化中... (${res.statusCode})` })
+            resolve(res)
+          },
+          fail: (err) => {
+            console.error('[优化] 请求失败:', err)
+            console.error('[优化] 错误详情:', JSON.stringify(err))
+            reject(new Error(`GPT优化请求失败: ${err.errMsg}`))
+          }
         })
       })
 
@@ -311,6 +333,8 @@ Page({
 
       // 封装 wx.request 为 Promise
       const requestPromise = new Promise((resolve, reject) => {
+        console.log('[生成] 请求URL:', `${apiBaseUrl}/api/generate-video`)
+        console.log('[生成] 请求参数:', { prompt: optimizedPrompt.substring(0, 50) + '...', seconds: duration, size })
         wx.request({
           url: `${apiBaseUrl}/api/generate-video`,
           method: 'POST',
@@ -322,8 +346,17 @@ Page({
           header: {
             'content-type': 'application/json'
           },
-          success: resolve,
-          fail: reject
+          success: (res) => {
+            console.log('[生成] API响应状态码:', res.statusCode)
+            console.log('[生成] API响应数据:', res.data)
+            this.setData({ statusText: `创建任务中... (${res.statusCode})` })
+            resolve(res)
+          },
+          fail: (err) => {
+            console.error('[生成] 请求失败:', err)
+            console.error('[生成] 错误详情:', JSON.stringify(err))
+            reject(new Error(`生成视频请求失败: ${err.errMsg}`))
+          }
         })
       })
 
@@ -352,11 +385,26 @@ Page({
 
     } catch (error) {
       console.error('[错误] 生成视频失败:', error)
+      console.error('[错误] 错误堆栈:', error.stack)
+
+      // 显示详细错误信息
+      const errorMsg = error.message || '生成失败，请检查API服务器是否正常运行'
+      console.error('[错误] 错误信息:', errorMsg)
+
       this.setData({
-        errorMessage: error.message || '生成失败，请检查API服务器是否正常运行',
+        errorMessage: errorMsg,
         isGenerating: false,
         generationProgress: 0
       })
+
+      // 如果是网络错误，提示检查网络连接
+      if (errorMsg.includes('request:fail') || errorMsg.includes('网络') || errorMsg.includes('timeout')) {
+        wx.showModal({
+          title: '网络错误',
+          content: '请检查网络连接或稍后重试',
+          showCancel: false
+        })
+      }
     }
   },
 
@@ -367,14 +415,23 @@ Page({
     const poll = async () => {
       try {
         const res = await new Promise((resolve, reject) => {
+          console.log('[状态查询] 请求URL:', `${apiBaseUrl}/api/video-status/${videoId}`)
           wx.request({
             url: `${apiBaseUrl}/api/video-status/${videoId}`,
             method: 'GET',
             header: {
               'content-type': 'application/json'
             },
-            success: resolve,
-            fail: reject
+            success: (res) => {
+              console.log('[状态查询] API响应状态码:', res.statusCode)
+              console.log('[状态查询] API响应数据:', res.data)
+              resolve(res)
+            },
+            fail: (err) => {
+              console.error('[状态查询] 请求失败:', err)
+              console.error('[状态查询] 错误详情:', JSON.stringify(err))
+              reject(new Error(`状态查询失败: ${err.errMsg}`))
+            }
           })
         })
 
@@ -770,6 +827,8 @@ Page({
     const filename = `${videoId}.mp4`
     const url = `${apiBaseUrl}/videos/${filename}`
 
+    console.log('[下载] 下载URL:', url)
+
     return new Promise((resolve, reject) => {
       wx.downloadFile({
         url: url,
@@ -785,7 +844,22 @@ Page({
         },
         fail: (err) => {
           console.error('[下载] 下载失败:', err)
+          console.error('[下载] 错误详情:', JSON.stringify(err))
           reject(new Error(err.errMsg || '下载失败'))
+        }
+      })
+    })
+  },
+
+  // 获取网络类型
+  getNetworkType() {
+    return new Promise((resolve) => {
+      wx.getNetworkType({
+        success: (res) => {
+          resolve(res.networkType)
+        },
+        fail: () => {
+          resolve('unknown')
         }
       })
     })
