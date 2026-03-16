@@ -712,8 +712,12 @@ Page({
     console.log('[等待] 开始智能等待视频文件就绪...')
 
     const filename = `${videoId}.mp4`
-    const maxAttempts = 15  // 最多尝试15次（45秒）
+    const maxAttempts = 20  // 最多尝试20次（60秒）
     const checkInterval = 3000  // 每3秒检查一次
+
+    // 首次等待5秒，给服务器更多时间完成文件写入
+    console.log('[等待] 首次等待5秒，等待服务器完成文件写入...')
+    await new Promise(resolve => setTimeout(resolve, 5000))
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       console.log(`[等待] 第 ${attempt} 次检查文件...`)
@@ -756,27 +760,35 @@ Page({
     return false
   },
 
-  // 检查视频文件是否存在
+  // 检查视频文件是否存在（使用GET请求的range方式）
   async checkVideoExists(videoId, apiBaseUrl) {
     const filename = `${videoId}.mp4`
     const url = `${apiBaseUrl}/videos/${filename}`
 
     return new Promise((resolve, reject) => {
+      // 使用GET请求，只请求第一个字节来检查文件是否存在和大小
       wx.request({
         url: url,
-        method: 'HEAD',
+        method: 'GET',
+        header: {
+          'Range': 'bytes=0-0'  // 只请求第一个字节
+        },
         timeout: 5000,
         success: (res) => {
-          // HEAD请求成功，检查状态码和文件大小
-          const fileSize = res.header['Content-Length'] || 0
+          // GET请求成功，检查状态码和响应大小
+          const contentLength = res.header['Content-Length'] || res.header['content-length'] || 0
+          const contentType = res.header['Content-Type'] || res.header['content-type'] || ''
           console.log('[检查] 文件检查响应:', {
             statusCode: res.statusCode,
-            fileSize: fileSize
+            contentLength: contentLength,
+            contentType: contentType
           })
-          resolve(res.statusCode === 200 && fileSize > 0)
+          // 状态码应该是206(Partial Content)或200，并且有有效的大小
+          const isVideo = contentType.includes('video') || contentType.includes('mp4')
+          resolve((res.statusCode === 206 || res.statusCode === 200) && contentLength > 0 && isVideo)
         },
         fail: (err) => {
-          console.error('[检查] HEAD请求失败:', err)
+          console.error('[检查] GET请求失败:', err)
           // 请求失败
           resolve(false)
         }

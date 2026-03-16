@@ -117,6 +117,11 @@ def process_video_async(video_id, local_filename):
             print(f"[下载] 正在写入本地文件...")
             content.write_to_file(local_path)
 
+            # 等待文件系统完成写入（确保文件真正可读）
+            print(f"[下载] 等待文件系统完成写入...")
+            import time
+            time.sleep(1)  # 给文件系统1秒钟完成写入
+
             # 验证文件是否存在
             if not os.path.exists(local_path):
                 print(f"[错误] ❌ 文件未成功创建: {local_path}")
@@ -375,8 +380,22 @@ def get_video_status(video_id):
 
         # 如果完成，提供本地URL
         if task['status'] == 'completed' and task['local_path']:
-            # 返回相对路径供前端访问
-            response_data['videoUrl'] = f'/videos/{video_id}.mp4'
+            # 再次验证文件是否存在且可读
+            local_path = task['local_path']
+            if os.path.exists(local_path):
+                file_size = os.path.getsize(local_path)
+                if file_size > 0:
+                    # 文件有效，返回视频URL
+                    print(f"[状态] ✅ 文件验证通过，大小: {file_size} 字节")
+                    response_data['videoUrl'] = f'/videos/{video_id}.mp4'
+                else:
+                    print(f"[状态] ⚠️ 文件大小为0，状态设为downloading")
+                    response_data['status'] = 'downloading'
+                    response_data['progress'] = 95
+            else:
+                print(f"[状态] ⚠️ 文件不存在，状态设为downloading")
+                response_data['status'] = 'downloading'
+                response_data['progress'] = 95
 
         # 如果失败，返回错误信息
         if task['status'] == 'failed':
