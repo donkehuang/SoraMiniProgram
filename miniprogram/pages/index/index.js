@@ -849,9 +849,12 @@ Page({
         url: url,
         timeout: 60000,  // 60秒超时
         success: (res) => {
-          console.log('[下载] 收到响应，状态码:', res.statusCode)
+          console.log('[下载] ====== 下载响应详情 ======')
+          console.log('[下载] 状态码:', res.statusCode)
           console.log('[下载] 临时文件路径:', res.tempFilePath)
           console.log('[下载] 临时文件大小:', res.tempFileSize)
+          console.log('[下载] 响应头:', JSON.stringify(res.header || {}))
+          console.log('[下载] ========================')
 
           if (res.statusCode === 200) {
             if (res.tempFileSize > 0) {

@@ -439,19 +439,31 @@ def serve_video(filename):
         print(f"[视频服务] ✅ 找到文件，大小: {file_size} 字节 ({file_size / 1024 / 1024:.2f} MB)")
         print(f"[视频服务] 使用目录: {os.path.dirname(file_path_abs)}")
 
+        # 验证文件可读
+        try:
+            with open(file_path_abs, 'rb') as f:
+                header = f.read(10)
+            print(f"[视频服务] ✅ 文件可读，文件头: {header.hex()}")
+        except Exception as e:
+            print(f"[视频服务] ❌ 文件不可读: {e}")
+            return jsonify({'error': '视频文件不可读'}), 500
+
         # 发送视频文件，使用绝对路径避免路径问题
         try:
+            print(f"[视频服务] 准备发送文件...")
             response = send_from_directory(
                 os.path.dirname(file_path_abs),
                 filename,
                 as_attachment=False,
                 mimetype='video/mp4'
             )
-            print(f"[视频服务] ✅ 返回视频文件")
+            print(f"[视频服务] ✅ 返回视频文件, 响应类型: {type(response)}")
             return response
         except Exception as send_error:
             print(f"[视频服务] send_from_directory失败: {send_error}")
             print(f"[视频服务] 尝试直接读取文件并发送...")
+            import traceback
+            traceback.print_exc()
             # 备用方案：直接读取文件
             return send_file(
                 file_path_abs,
