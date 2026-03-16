@@ -104,18 +104,58 @@ def process_video_async(video_id, local_filename):
 
         # 视频生成完成，下载视频
         print(f"[完成] 视频生成完成，开始下载...")
-        content = client.videos.download_content(video.id, variant="video")
-        local_path = os.path.join(VIDEOS_DIR, local_filename)
-        content.write_to_file(local_path)
+        print(f"[下载] 视频ID: {video_id}")
+        print(f"[下载] 目标路径: {os.path.join(VIDEOS_DIR, local_filename)}")
 
-        print(f"[下载] 视频已保存到: {local_path}")
+        try:
+            # 开始下载
+            print(f"[下载] 正在从 OpenAI 下载视频...")
+            content = client.videos.download_content(video.id, variant="video")
+            local_path = os.path.join(VIDEOS_DIR, local_filename)
 
-        # 更新任务状态为完成
-        video_tasks[video_id].update({
-            'status': 'completed',
-            'progress': 100,
-            'local_path': local_path
-        })
+            # 写入文件
+            print(f"[下载] 正在写入本地文件...")
+            content.write_to_file(local_path)
+
+            # 验证文件是否存在
+            if not os.path.exists(local_path):
+                print(f"[错误] ❌ 文件未成功创建: {local_path}")
+                video_tasks[video_id].update({
+                    'status': 'failed',
+                    'error': '视频文件下载失败'
+                })
+                return
+
+            # 验证文件大小
+            file_size = os.path.getsize(local_path)
+            print(f"[下载] ✅ 视频已保存到: {local_path}")
+            print(f"[下载] ✅ 文件大小: {file_size} 字节 ({file_size / 1024 / 1024:.2f} MB)")
+
+            if file_size == 0:
+                print(f"[错误] ❌ 文件大小为0: {local_path}")
+                video_tasks[video_id].update({
+                    'status': 'failed',
+                    'error': '视频文件损坏（大小为0）'
+                })
+                return
+
+            # 更新任务状态为完成
+            video_tasks[video_id].update({
+                'status': 'completed',
+                'progress': 100,
+                'local_path': local_path,
+                'file_size': file_size
+            })
+            print(f"[完成] ✅ 视频处理完成: {video_id}")
+
+        except Exception as download_error:
+            print(f"[错误] ❌ 视频下载失败: {str(download_error)}")
+            import traceback
+            traceback.print_exc()
+            video_tasks[video_id].update({
+                'status': 'failed',
+                'error': f'视频下载失败: {str(download_error)}'
+            })
 
     except Exception as e:
         print(f"[错误] 异步处理异常: {str(e)}")

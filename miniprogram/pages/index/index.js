@@ -828,24 +828,48 @@ Page({
     const url = `${apiBaseUrl}/videos/${filename}`
 
     console.log('[下载] 下载URL:', url)
+    console.log('[下载] 开始下载，可能需要较长时间...')
 
     return new Promise((resolve, reject) => {
       wx.downloadFile({
         url: url,
+        timeout: 60000,  // 60秒超时
         success: (res) => {
+          console.log('[下载] 收到响应，状态码:', res.statusCode)
+          console.log('[下载] 临时文件路径:', res.tempFilePath)
+          console.log('[下载] 临时文件大小:', res.tempFileSize)
+
           if (res.statusCode === 200) {
-            console.log('[下载] 下载成功:', res.tempFilePath)
-            console.log('[下载] 文件大小:', res.tempFileSize)
-            resolve(res.tempFilePath)
+            if (res.tempFileSize > 0) {
+              console.log('[下载] ✅ 下载成功:', res.tempFilePath)
+              resolve(res.tempFilePath)
+            } else {
+              console.error('[下载] ❌ 文件大小为0')
+              reject(new Error('下载的文件大小为0，服务器可能尚未完成下载'))
+            }
+          } else if (res.statusCode === 404) {
+            console.error('[下载] ❌ 404 - 文件不存在')
+            reject(new Error('视频文件不存在，请稍后重试'))
+          } else if (res.statusCode === 403) {
+            console.error('[下载] ❌ 403 - 权限拒绝')
+            reject(new Error('下载被拒绝，请检查Nginx配置'))
           } else {
-            console.error('[下载] HTTP错误:', res.statusCode)
+            console.error('[下载] ❌ HTTP错误:', res.statusCode)
             reject(new Error(`下载失败: HTTP ${res.statusCode}`))
           }
         },
         fail: (err) => {
           console.error('[下载] 下载失败:', err)
           console.error('[下载] 错误详情:', JSON.stringify(err))
-          reject(new Error(err.errMsg || '下载失败'))
+
+          // 判断错误类型
+          if (err.errMsg && err.errMsg.includes('timeout')) {
+            reject(new Error('下载超时，文件可能过大'))
+          } else if (err.errMsg && err.errMsg.includes('fail')) {
+            reject(new Error('网络错误，请检查网络连接'))
+          } else {
+            reject(new Error(err.errMsg || '下载失败'))
+          }
         }
       })
     })
