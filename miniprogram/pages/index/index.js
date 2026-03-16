@@ -711,47 +711,37 @@ Page({
   async waitForVideoReady(videoId, apiBaseUrl) {
     console.log('[等待] 开始智能等待视频文件就绪...')
 
-    const filename = `${videoId}.mp4`
-    const maxAttempts = 20  // 最多尝试20次（60秒）
+    const maxAttempts = 15  // 最多尝试15次（45秒）
     const checkInterval = 3000  // 每3秒检查一次
-
-    // 首次等待5秒，给服务器更多时间完成文件写入
-    console.log('[等待] 首次等待5秒，等待服务器完成文件写入...')
-    await new Promise(resolve => setTimeout(resolve, 5000))
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       console.log(`[等待] 第 ${attempt} 次检查文件...`)
 
       try {
-        // 尝试请求文件
         const fileExists = await this.checkVideoExists(videoId, apiBaseUrl)
 
         if (fileExists) {
           console.log(`[等待] ✅ 文件就绪，第 ${attempt} 次检查成功`)
-          return true  // 文件存在，可以继续
+          return true
         }
 
-        // 文件不存在，更新状态
-        const progress = 95 + (attempt / maxAttempts) * 5  // 95%-100%
+        const progress = 95 + (attempt / maxAttempts) * 5
         this.setData({
           generationProgress: Math.min(progress, 100),
           statusText: `等待文件就绪... (${attempt}/${maxAttempts})`
         })
 
-        // 等待后重试
         console.log(`[等待] ⏸️ 文件未就绪，等待 ${checkInterval/1000} 秒后重试...`)
         await new Promise(resolve => setTimeout(resolve, checkInterval))
 
       } catch (error) {
         console.error(`[等待] 第 ${attempt} 次检查出错:`, error)
 
-        // 最后一次尝试失败，直接返回，让下载重试机制处理
         if (attempt === maxAttempts) {
           console.warn('[等待] 已达到最大尝试次数，继续下载流程')
           return false
         }
 
-        // 等待后继续尝试
         await new Promise(resolve => setTimeout(resolve, checkInterval))
       }
     }
@@ -760,22 +750,17 @@ Page({
     return false
   },
 
-  // 检查视频文件是否存在（使用GET请求的range方式）
+  // 检查视频文件是否存在
   async checkVideoExists(videoId, apiBaseUrl) {
     const filename = `${videoId}.mp4`
     const url = `${apiBaseUrl}/videos/${filename}`
 
     return new Promise((resolve, reject) => {
-      // 使用GET请求，只请求第一个字节来检查文件是否存在和大小
       wx.request({
         url: url,
-        method: 'GET',
-        header: {
-          'Range': 'bytes=0-0'  // 只请求第一个字节
-        },
+        method: 'HEAD',
         timeout: 5000,
         success: (res) => {
-          // GET请求成功，检查状态码和响应大小
           const contentLength = res.header['Content-Length'] || res.header['content-length'] || 0
           const contentType = res.header['Content-Type'] || res.header['content-type'] || ''
           console.log('[检查] 文件检查响应:', {
@@ -783,13 +768,10 @@ Page({
             contentLength: contentLength,
             contentType: contentType
           })
-          // 状态码应该是206(Partial Content)或200，并且有有效的大小
-          const isVideo = contentType.includes('video') || contentType.includes('mp4')
-          resolve((res.statusCode === 206 || res.statusCode === 200) && contentLength > 0 && isVideo)
+          resolve(res.statusCode === 200 && contentLength > 0)
         },
         fail: (err) => {
-          console.error('[检查] GET请求失败:', err)
-          // 请求失败
+          console.error('[检查] HEAD请求失败:', err)
           resolve(false)
         }
       })
