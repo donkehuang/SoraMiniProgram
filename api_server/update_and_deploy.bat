@@ -7,7 +7,7 @@ echo ==========================================
 
 set API_DIR=C:\Users\donke\Desktop\LuckyTalk\api_server
 set SERVER=root@8.211.175.227
-set REMOTE_DIR=/root/luckytalk-api
+set REMOTE_DIR=/home/admin/SoraMiniProgram/api_server
 
 echo.
 echo 步骤 1: 上传代码到服务器...

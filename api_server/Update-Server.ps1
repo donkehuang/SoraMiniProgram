@@ -6,7 +6,7 @@ Write-Host "==========================================" -ForegroundColor Cyan
 
 $LocalDir = "C:\Users\donke\Desktop\LuckyTalk\api_server"
 $Server = "root@8.211.175.227"
-$RemoteDir = "/root/luckytalk-api"
+$RemoteDir = "/home/admin/SoraMiniProgram/api_server"
 
 # 检查是否在正确的目录
 if (-not (Test-Path "$LocalDir\sora_api.py")) {

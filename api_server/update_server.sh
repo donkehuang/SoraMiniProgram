@@ -8,6 +8,7 @@ echo "=========================================="
 
 DOMAIN="www.enfuri51.xyz"
 SERVER="root@8.211.175.227"
+WORK_DIR="/home/admin/SoraMiniProgram/api_server"
 
 echo ""
 echo "步骤 1: 上传最新代码..."

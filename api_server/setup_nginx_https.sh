@@ -8,7 +8,7 @@ echo "=========================================="
 
 DOMAIN="www.enfuri51.xyz"
 NGINX_CONF="/etc/nginx/sites-available/sora-api"
-WORK_DIR="/root/luckytalk-api"
+WORK_DIR="/home/admin/SoraMiniProgram/api_server"
 
 # 检查证书是否存在
 if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
