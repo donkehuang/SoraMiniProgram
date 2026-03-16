@@ -321,10 +321,16 @@ def generate_video():
                     time.sleep(sleep_t)
 
         if video is None:
-            print(f"[失败] 视频创建失败: {str(last_exc)}")
+            error_msg = str(last_exc)
+            print(f"[失败] 视频创建失败: {error_msg}")
+
+            # 特殊处理审核拦截错误
+            if 'moderation' in error_msg.lower() or 'blocked' in error_msg.lower():
+                error_msg = "请求被内容审核系统拦截。请修改提示词，避免包含敏感内容(暴力、色情、仇恨言论等)。"
+
             return jsonify({
                 'success': False,
-                'error': f'视频创建失败: {str(last_exc)}'
+                'error': error_msg
             }), 500
 
         # 初始化任务状态
