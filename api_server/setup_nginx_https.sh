@@ -50,6 +50,18 @@ echo "✅ SSL 证书已找到"
 # 进入工作目录
 cd "$WORK_DIR" || exit 1
 
+# 拉取最新代码
+echo ""
+echo "=========================================="
+echo "拉取最新代码"
+echo "=========================================="
+git pull origin master
+if [ $? -ne 0 ]; then
+    echo "⚠️ Git拉取失败,继续使用现有代码..."
+else
+    echo "✅ 代码拉取成功"
+fi
+
 # 备份现有配置
 if [ -f "$NGINX_CONF" ]; then
     echo "📦 备份现有配置..."
