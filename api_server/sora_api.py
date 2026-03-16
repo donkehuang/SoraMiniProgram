@@ -131,6 +131,19 @@ def process_video_async(video_id, local_filename):
             print(f"[下载] ✅ 视频已保存到: {local_path}")
             print(f"[下载] ✅ 文件大小: {file_size} 字节 ({file_size / 1024 / 1024:.2f} MB)")
 
+            # 尝试读取文件前100字节来验证文件可读
+            try:
+                with open(local_path, 'rb') as f:
+                    header = f.read(100)
+                print(f"[验证] ✅ 文件可读，文件头: {header[:20].hex()}...")
+            except Exception as read_error:
+                print(f"[错误] ❌ 文件不可读: {read_error}")
+                video_tasks[video_id].update({
+                    'status': 'failed',
+                    'error': f'视频文件不可读: {str(read_error)}'
+                })
+                return
+
             if file_size == 0:
                 print(f"[错误] ❌ 文件大小为0: {local_path}")
                 video_tasks[video_id].update({
