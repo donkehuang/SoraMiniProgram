@@ -473,9 +473,9 @@ Page({
             statusText: '等待视频就绪...'
           })
 
-          // 等待2秒，确保服务器端已经完成视频下载
+          // 等待更多时间，确保服务器端已经完成视频下载
           console.log('[等待] 等待服务器端完成视频下载...')
-          await new Promise(resolve => setTimeout(resolve, 2000))
+          await new Promise(resolve => setTimeout(resolve, 5000))
 
           // 显示上传状态
           this.setData({
@@ -483,6 +483,13 @@ Page({
           })
 
           try {
+            // 智能等待：持续检查文件是否就绪
+            console.log('[等待] 开始智能等待视频文件就绪...')
+            const fileReady = await this.waitForVideoReady(videoId, apiBaseUrl)
+
+            if (!fileReady) {
+              throw new Error('视频文件未就绪，服务器可能还在处理')
+            }
             // 1. 下载视频到本地临时路径（带重试）
             console.log('[步骤1] 开始下载视频到本地...')
             const localPath = await this.downloadVideoWithRetry(videoId, apiBaseUrl, 3)
@@ -705,7 +712,7 @@ Page({
     console.log('[等待] 开始智能等待视频文件就绪...')
 
     const filename = `${videoId}.mp4`
-    const maxAttempts = 10  // 最多尝试10次
+    const maxAttempts = 15  // 最多尝试15次（45秒）
     const checkInterval = 3000  // 每3秒检查一次
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -720,19 +727,26 @@ Page({
           return true  // 文件存在，可以继续
         }
 
-        // 文件不存在，等待后重试
+        // 文件不存在，更新状态
+        const progress = 95 + (attempt / maxAttempts) * 5  // 95%-100%
+        this.setData({
+          generationProgress: Math.min(progress, 100),
+          statusText: `等待文件就绪... (${attempt}/${maxAttempts})`
+        })
+
+        // 等待后重试
         console.log(`[等待] ⏸️ 文件未就绪，等待 ${checkInterval/1000} 秒后重试...`)
         await new Promise(resolve => setTimeout(resolve, checkInterval))
 
       } catch (error) {
         console.error(`[等待] 第 ${attempt} 次检查出错:`, error)
-        
+
         // 最后一次尝试失败，直接返回，让下载重试机制处理
         if (attempt === maxAttempts) {
           console.warn('[等待] 已达到最大尝试次数，继续下载流程')
           return false
         }
-        
+
         // 等待后继续尝试
         await new Promise(resolve => setTimeout(resolve, checkInterval))
       }
@@ -753,10 +767,16 @@ Page({
         method: 'HEAD',
         timeout: 5000,
         success: (res) => {
-          // HEAD请求成功，检查状态码
-          resolve(res.statusCode === 200)
+          // HEAD请求成功，检查状态码和文件大小
+          const fileSize = res.header['Content-Length'] || 0
+          console.log('[检查] 文件检查响应:', {
+            statusCode: res.statusCode,
+            fileSize: fileSize
+          })
+          resolve(res.statusCode === 200 && fileSize > 0)
         },
         fail: (err) => {
+          console.error('[检查] HEAD请求失败:', err)
           // 请求失败
           resolve(false)
         }
