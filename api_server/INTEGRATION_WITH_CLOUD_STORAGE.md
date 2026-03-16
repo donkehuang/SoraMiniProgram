@@ -194,7 +194,7 @@ async downloadToLocal(videoId, apiBaseUrl) {
     <text>☁️ 正在上传到云存储...</text>
   </view>
 
-  <text class="progress-info">⏱️ 预计需要5分钟，请耐心等待</text>
+  <text class="progress-info">⏱️ 预计需要2分钟，请耐心等待</text>
 </view>
 ```
 
@@ -248,7 +248,7 @@ async downloadToLocal(videoId, apiBaseUrl) {
 
 ## 🎯 快速开始
 
-### 1. 开通云存储（5分钟）
+### 1. 开通云存储（2分钟）
 
 ```
 微信开发者工具 → 云开发 → 存储 → 开通

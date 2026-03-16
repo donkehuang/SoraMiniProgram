@@ -145,7 +145,7 @@
       <text class="upload-text">正在上传到云存储...</text>
     </view>
 
-    <text class="progress-info">⏱️ 预计需要5分钟，请耐心等待</text>
+    <text class="progress-info">⏱️ 预计需要2分钟，请耐心等待</text>
 
       <button class="cancel-btn" bindtap="cancelGeneration" wx:if="{{!isUploading}}">取消生成</button>
     </view>
