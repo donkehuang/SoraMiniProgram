@@ -108,10 +108,17 @@ echo "=========================================="
 echo "更新 Flask API 服务"
 echo "=========================================="
 
-# 停止现有服务
+# 停止现有服务(使用更可靠的方法)
 echo "🛑 停止现有 Flask 服务..."
-pkill -f sora_api.py
+pkill -9 -f sora_api.py
 sleep 2
+
+# 检查并强制停止占用5000端口的进程
+if sudo netstat -tulpn | grep :5000 | grep -q LISTEN; then
+    echo "⚠️ 5000端口仍被占用,强制停止..."
+    sudo fuser -k 5000/tcp 2>/dev/null || true
+    sleep 2
+fi
 
 # 启动新服务
 echo "🚀 启动新的 Flask 服务..."
@@ -119,7 +126,7 @@ source venv/bin/activate
 nohup python sora_api.py > server.log 2>&1 &
 
 # 等待服务启动
-sleep 3
+sleep 5
 
 # 检查服务状态
 echo "📊 检查服务状态..."
