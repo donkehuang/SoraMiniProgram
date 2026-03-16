@@ -857,13 +857,31 @@ Page({
           console.log('[下载] ========================')
 
           if (res.statusCode === 200) {
-            if (res.tempFileSize > 0) {
-              console.log('[下载] ✅ 下载成功:', res.tempFilePath)
-              resolve(res.tempFilePath)
-            } else {
-              console.error('[下载] ❌ 文件大小为0')
-              reject(new Error('下载的文件大小为0，服务器可能尚未完成下载'))
-            }
+            // 使用getFileInfo获取实际的文件大小
+            wx.getFileInfo({
+              filePath: res.tempFilePath,
+              success: (fileInfo) => {
+                console.log('[下载] 实际文件大小:', fileInfo.size, '字节')
+
+                if (fileInfo.size > 0) {
+                  console.log('[下载] ✅ 下载成功:', res.tempFilePath)
+                  resolve(res.tempFilePath)
+                } else {
+                  console.error('[下载] ❌ 文件大小为0')
+                  reject(new Error('下载的文件大小为0，服务器可能尚未完成下载'))
+                }
+              },
+              fail: (err) => {
+                console.error('[下载] ❌ 获取文件信息失败:', err)
+                // 如果无法获取文件信息,但下载成功,尝试直接使用文件
+                if (res.tempFileSize && res.tempFileSize > 0) {
+                  console.log('[下载] ⚠️ 无法获取文件信息,但tempFileSize有值,继续使用')
+                  resolve(res.tempFilePath)
+                } else {
+                  reject(new Error('下载失败: 无法验证文件大小'))
+                }
+              }
+            })
           } else if (res.statusCode === 404) {
             console.error('[下载] ❌ 404 - 文件不存在')
             reject(new Error('视频文件不存在，请稍后重试'))
