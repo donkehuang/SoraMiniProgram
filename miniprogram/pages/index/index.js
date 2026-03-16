@@ -17,7 +17,7 @@ Page({
     showCreateView: false, // 是否显示创作界面
 
     // 预设prompt风格
-    styleOptions: [],
+    styleOptions: ['无风格'],
     styleIndex: 0,
     
     // 风格模板数据（从prompt.md解析）
@@ -166,12 +166,12 @@ Page({
   updateStyleOptions() {
     const duration = this.data.durationOptions[this.data.durationIndex]
     const templates = this.data.promptTemplates[duration] || []
-    const styleNames = templates.map(t => t.name)
-    
+    const styleNames = ['无风格', ...templates.map(t => t.name)]
+
     this.setData({
       styleOptions: styleNames
     })
-    
+
     console.log('[风格更新] 时长:', duration, '风格选项:', styleNames)
   },
 
@@ -268,64 +268,79 @@ Page({
 
       console.log('[开始] 创建视频生成任务...', { duration, size })
 
-      // 第一步：使用GPT优化提示词
       this.setData({
         isGenerating: true,
         generationProgress: 5,
-        statusText: '正在优化提示词...'
+        statusText: '准备生成视频...'
       })
 
-      // 获取选中的风格模板
+      // 判断是否选择了风格
+      let finalPrompt = prompt
       const durationKey = durationOptions[durationIndex]
-      const templates = this.data.promptTemplates[durationKey] || []
-      const selectedTemplate = templates[styleIndex]
-      
-      if (!selectedTemplate) {
-        throw new Error('未找到对应的风格模板')
-      }
 
-      console.log('[优化] 调用GPT优化提示词...', {
-        userDescription: prompt,
-        styleTemplate: selectedTemplate.template,
-        duration: durationKey
-      })
-
-      // 调用GPT优化API
-      const optimizeResult = await new Promise((resolve, reject) => {
-        console.log('[优化] 请求URL:', `${apiBaseUrl}/api/optimize-prompt`)
-        wx.request({
-          url: `${apiBaseUrl}/api/optimize-prompt`,
-          method: 'POST',
-          data: {
-            userDescription: prompt,
-            styleTemplate: selectedTemplate.template,
-            duration: durationKey
-          },
-          header: {
-            'content-type': 'application/json'
-          },
-          success: (res) => {
-            console.log('[优化] API响应状态码:', res.statusCode)
-            console.log('[优化] API响应数据:', res.data)
-            this.setData({ statusText: `GPT优化中... (${res.statusCode})` })
-            resolve(res)
-          },
-          fail: (err) => {
-            console.error('[优化] 请求失败:', err)
-            console.error('[优化] 错误详情:', JSON.stringify(err))
-            reject(new Error(`GPT优化请求失败: ${err.errMsg}`))
-          }
+      if (styleIndex === 0) {
+        // 选择"无风格",直接使用用户输入的prompt
+        console.log('[风格] 使用无风格模式,跳过GPT优化')
+        finalPrompt = prompt
+      } else {
+        // 选择具体风格,调用GPT优化
+        console.log('[风格] 使用风格模式,调用GPT优化')
+        this.setData({
+          generationProgress: 10,
+          statusText: '正在优化提示词...'
         })
-      })
 
-      if (optimizeResult.statusCode !== 200 || !optimizeResult.data.success) {
-        throw new Error(optimizeResult.data.error || 'GPT优化失败')
+        // 获取选中的风格模板
+        const templates = this.data.promptTemplates[durationKey] || []
+        const selectedTemplate = templates[styleIndex - 1] // 减1因为第一个是"无风格"
+
+        if (!selectedTemplate) {
+          throw new Error('未找到对应的风格模板')
+        }
+
+        console.log('[优化] 调用GPT优化提示词...', {
+          userDescription: prompt,
+          styleTemplate: selectedTemplate.template,
+          duration: durationKey
+        })
+
+        // 调用GPT优化API
+        const optimizeResult = await new Promise((resolve, reject) => {
+          console.log('[优化] 请求URL:', `${apiBaseUrl}/api/optimize-prompt`)
+          wx.request({
+            url: `${apiBaseUrl}/api/optimize-prompt`,
+            method: 'POST',
+            data: {
+              userDescription: prompt,
+              styleTemplate: selectedTemplate.template,
+              duration: durationKey
+            },
+            header: {
+              'content-type': 'application/json'
+            },
+            success: (res) => {
+              console.log('[优化] API响应状态码:', res.statusCode)
+              console.log('[优化] API响应数据:', res.data)
+              this.setData({ statusText: `GPT优化中... (${res.statusCode})` })
+              resolve(res)
+            },
+            fail: (err) => {
+              console.error('[优化] 请求失败:', err)
+              console.error('[优化] 错误详情:', JSON.stringify(err))
+              reject(new Error(`GPT优化请求失败: ${err.errMsg}`))
+            }
+          })
+        })
+
+        if (optimizeResult.statusCode !== 200 || !optimizeResult.data.success) {
+          throw new Error(optimizeResult.data.error || 'GPT优化失败')
+        }
+
+        finalPrompt = optimizeResult.data.optimizedPrompt
+        console.log('[优化] GPT优化完成:', finalPrompt)
       }
 
-      const optimizedPrompt = optimizeResult.data.optimizedPrompt
-      console.log('[优化] GPT优化完成:', optimizedPrompt)
-
-      // 第二步：使用优化后的提示词生成视频
+      // 第二步：使用提示词生成视频
       this.setData({
         generationProgress: 15,
         statusText: '正在创建视频任务...'
@@ -334,12 +349,12 @@ Page({
       // 封装 wx.request 为 Promise
       const requestPromise = new Promise((resolve, reject) => {
         console.log('[生成] 请求URL:', `${apiBaseUrl}/api/generate-video`)
-        console.log('[生成] 请求参数:', { prompt: optimizedPrompt.substring(0, 50) + '...', seconds: duration, size })
+        console.log('[生成] 请求参数:', { prompt: finalPrompt.substring(0, 50) + '...', seconds: duration, size })
         wx.request({
           url: `${apiBaseUrl}/api/generate-video`,
           method: 'POST',
           data: {
-            prompt: optimizedPrompt,  // 使用优化后的提示词
+            prompt: finalPrompt,  // 使用最终的提示词(可能经过优化,也可能是原始输入)
             seconds: duration,
             size: size
           },
