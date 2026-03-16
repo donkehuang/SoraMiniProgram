@@ -408,7 +408,7 @@ def get_video_status(video_id):
         }), 500
 
 
-@app.route('/videos/<filename>')
+@app.route('/videos/<filename>', methods=['GET', 'HEAD'])
 def serve_video(filename):
     """提供视频文件"""
     try:
@@ -439,6 +439,17 @@ def serve_video(filename):
         file_size = os.path.getsize(file_path_abs)
         print(f"[视频服务] ✅ 找到文件，大小: {file_size} 字节 ({file_size / 1024 / 1024:.2f} MB)")
         print(f"[视频服务] 使用目录: {os.path.dirname(file_path_abs)}")
+
+        # 如果是HEAD请求，只返回响应头
+        if request.method == 'HEAD':
+            print(f"[视频服务] HEAD请求，只返回响应头")
+            from flask import Response
+            response = Response()
+            response.headers['Content-Type'] = 'video/mp4'
+            response.headers['Content-Length'] = str(file_size)
+            response.headers['Accept-Ranges'] = 'bytes'
+            print(f"[视频服务] HEAD响应: Content-Length={file_size}")
+            return response
 
         # 验证文件可读
         try:

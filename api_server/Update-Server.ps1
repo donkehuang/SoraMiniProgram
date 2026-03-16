@@ -52,14 +52,15 @@ Write-Host "`n步骤 2: 在服务器上执行更新..." -ForegroundColor Yellow
 Write-Host "==========================================" -ForegroundColor Gray
 
 Write-Host "执行 setup_nginx_https.sh..." -ForegroundColor White
-ssh $Server "cd $RemoteDir && bash setup_nginx_https.sh"
+$sshCommand = "cd $RemoteDir; bash setup_nginx_https.sh"
+ssh $Server $sshCommand
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n==========================================" -ForegroundColor Cyan
     Write-Host "✅ 更新完成！" -ForegroundColor Green
     Write-Host "==========================================" -ForegroundColor Cyan
     Write-Host "API 地址: https://www.enfuri51.xyz" -ForegroundColor White
-    Write-Host "查看日志: ssh $Server 'tail -f /root/luckytalk-api/server.log'" -ForegroundColor Gray
+    Write-Host "查看日志: ssh $Server 'tail -f /home/admin/SoraMiniProgram/api_server/server.log'" -ForegroundColor Gray
     Write-Host "==========================================" -ForegroundColor Cyan
 } else {
     Write-Host "`n❌ 更新失败，请检查错误信息" -ForegroundColor Red
