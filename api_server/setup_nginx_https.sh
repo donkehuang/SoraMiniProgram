@@ -7,13 +7,42 @@ echo "配置 Nginx HTTPS 并更新服务"
 echo "=========================================="
 
 DOMAIN="www.enfuri51.xyz"
+EMAIL="m13236533199@163.com"
 NGINX_CONF="/etc/nginx/sites-available/sora-api"
 WORK_DIR="/home/admin/SoraMiniProgram/api_server"
 
-# 检查证书是否存在
+# 检查证书是否存在，如果不存在则申请
 if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
-    echo "❌ SSL 证书不存在，请先运行 setup_https.sh 申请证书"
-    exit 1
+    echo "⚠️ SSL 证书不存在，开始申请证书..."
+    echo "=========================================="
+
+    # 检查是否安装了 certbot
+    if ! command -v certbot &> /dev/null; then
+        echo "📦 安装 Certbot..."
+        sudo apt-get update
+        sudo apt-get install -y certbot
+    fi
+
+    # 临时启动 Nginx（如果未运行）
+    if ! systemctl is-active --quiet nginx; then
+        echo "🚀 临时启动 Nginx 用于证书验证..."
+        sudo systemctl start nginx
+    fi
+
+    # 申请证书
+    echo "🔐 申请 SSL 证书..."
+    sudo certbot certonly --webroot -w /var/www/html -d $DOMAIN --email $EMAIL --agree-tos --non-interactive
+
+    if [ $? -eq 0 ]; then
+        echo "✅ SSL 证书申请成功"
+    else
+        echo "❌ SSL 证书申请失败"
+        echo "请检查:"
+        echo "  1. 域名 $DOMAIN 是否正确解析到服务器"
+        echo "  2. 80端口是否开放"
+        echo "  3. Nginx是否正常运行"
+        exit 1
+    fi
 fi
 
 echo "✅ SSL 证书已找到"
