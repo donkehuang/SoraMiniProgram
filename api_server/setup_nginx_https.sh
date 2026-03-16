@@ -1,13 +1,14 @@
 #!/bin/bash
 
-# 配置 Nginx HTTPS
+# 配置 Nginx HTTPS 并更新服务
 
 echo "=========================================="
-echo "配置 Nginx HTTPS"
+echo "配置 Nginx HTTPS 并更新服务"
 echo "=========================================="
 
 DOMAIN="www.enfuri51.xyz"
 NGINX_CONF="/etc/nginx/sites-available/sora-api"
+WORK_DIR="/root/luckytalk-api"
 
 # 检查证书是否存在
 if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
@@ -16,6 +17,9 @@ if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
 fi
 
 echo "✅ SSL 证书已找到"
+
+# 进入工作目录
+cd "$WORK_DIR" || exit 1
 
 # 备份现有配置
 if [ -f "$NGINX_CONF" ]; then
@@ -57,6 +61,38 @@ else
     exit 1
 fi
 
+# 更新 Flask API 服务
+echo ""
+echo "=========================================="
+echo "更新 Flask API 服务"
+echo "=========================================="
+
+# 停止现有服务
+echo "🛑 停止现有 Flask 服务..."
+pkill -f sora_api.py
+sleep 2
+
+# 启动新服务
+echo "🚀 启动新的 Flask 服务..."
+source venv/bin/activate
+nohup python sora_api.py > server.log 2>&1 &
+
+# 等待服务启动
+sleep 3
+
+# 检查服务状态
+echo "📊 检查服务状态..."
+ps aux | grep sora_api.py | grep -v grep
+
+if [ $? -eq 0 ]; then
+    echo "✅ Flask API 服务运行正常"
+else
+    echo "❌ Flask API 服务启动失败"
+    echo "查看日志:"
+    tail -n 20 server.log
+    exit 1
+fi
+
 # 验证 HTTPS
 echo ""
 echo "=========================================="
@@ -66,8 +102,10 @@ curl -I https://$DOMAIN/api/health
 
 echo ""
 echo "=========================================="
-echo "✅ HTTPS 配置完成！"
+echo "✅ 更新完成！"
 echo "=========================================="
 echo "API 地址: https://$DOMAIN"
 echo "视频地址: https://$DOMAIN/videos/"
+echo ""
+echo "查看日志: tail -f $WORK_DIR/server.log"
 echo "=========================================="
