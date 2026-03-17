@@ -292,8 +292,11 @@ def generate_video():
         prompt = data.get('prompt', '')
         seconds = data.get('seconds', '12')
         size = data.get('size', '1280x720')
+        image_url = data.get('imageUrl', '')  # 可选：参考图片URL
 
         print(f"[参数] prompt: {prompt[:50]}..., seconds: {seconds}, size: {size}")
+        if image_url:
+            print(f"[参数] 参考图片: {image_url}")
 
         if not prompt:
             print("[错误] prompt为空")
@@ -309,12 +312,25 @@ def generate_video():
         last_exc = None
         for attempt in range(1, 4):
             try:
-                video = client.videos.create(
-                    prompt=prompt,
-                    model="sora-2",
-                    seconds=seconds,
-                    size=size
-                )
+                # 如果提供了参考图片，使用它作为第一帧
+                if image_url:
+                    print("[创建] 使用参考图片作为第一帧...")
+                    # 尝试使用 image 参数（需要完整URL）
+                    full_image_url = image_url if image_url.startswith('http') else f"{request.host_url.rstrip('/')}{image_url}"
+                    video = client.videos.create(
+                        prompt=prompt,
+                        model="sora-2",
+                        seconds=seconds,
+                        size=size,
+                        image=full_image_url  # 使用参考图片
+                    )
+                else:
+                    video = client.videos.create(
+                        prompt=prompt,
+                        model="sora-2",
+                        seconds=seconds,
+                        size=size
+                    )
                 print(f"[创建] 视频任务创建成功，视频ID: {video.id}")
                 break
             except Exception as e:

@@ -12,6 +12,7 @@ Page({
     videoUrl: '',
     errorMessage: '',
     apiBaseUrl: 'https://www.enfuri51.xyz', // API服务器地址（HTTPS域名）
+    referenceImage: '',  // 参考图片URL（用于视频生成）
 
     // 界面状态
     showCreateView: false, // 是否显示创作界面
@@ -593,14 +594,22 @@ Page({
   generateVideoFromImage() {
     if (!this.data.imageUrl) return
 
-    // 提示用户需要切换到视频生成界面
+    // 保存参考图片URL
+    const imageInfo = {
+      url: this.data.imageUrl,
+      prompt: this.data.imagePrompt || ''  // 同时也保留生成图片时的提示词
+    }
+
+    // 提示用户
     wx.showModal({
-      title: '提示',
-      content: '即将跳转到视频生成界面，您可以在那里输入提示词并使用此图片作为参考',
+      title: '使用图片生成视频',
+      content: '即将跳转到视频生成界面，系统将使用此图片作为视频的第一帧。您可以修改或保留提示词。',
       success: (res) => {
         if (res.confirm) {
-          // 返回主界面，然后进入创作界面
+          // 设置参考图片和提示词
           this.setData({
+            referenceImage: imageInfo.url,
+            prompt: imageInfo.prompt,  // 使用生图时的提示词作为默认
             showImageView: false
           })
           setTimeout(() => {
@@ -614,7 +623,7 @@ Page({
   },
 
   async generateVideo() {
-    const { prompt, durationIndex, durationOptions, orientationIndex, styleIndex, apiBaseUrl } = this.data
+    const { prompt, durationIndex, durationOptions, orientationIndex, styleIndex, apiBaseUrl, referenceImage } = this.data
 
     if (!prompt.trim()) {
       this.setData({
@@ -757,7 +766,8 @@ Page({
           data: {
             prompt: finalPrompt,  // 使用最终的提示词(可能经过优化,也可能是原始输入)
             seconds: duration,
-            size: size
+            size: size,
+            imageUrl: referenceImage || ''  // 如果有参考图片，传递给后端
           },
           header: {
             'content-type': 'application/json'
