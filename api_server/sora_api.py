@@ -553,10 +553,11 @@ def generate_image():
             }), 400
 
         # 根据方向设置尺寸
+        # DALL-E 3 支持的尺寸: 1024x1024, 1024x1792, 1792x1024
         if orientation == 'vertical':
-            size = "1024x1536"  # 竖屏 2:3
+            size = "1024x1792"  # 竖屏 9:16
         else:
-            size = "1536x1024"  # 横屏 3:2
+            size = "1792x1024"  # 横屏 16:9
 
         print(f"[参数] 生成尺寸: {size}")
 
