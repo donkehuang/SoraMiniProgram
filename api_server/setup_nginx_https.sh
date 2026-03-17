@@ -128,6 +128,8 @@ nohup python sora_api.py > server.log 2>&1 &
 # 等待服务启动
 sleep 5
 
+# 安装pillow
+pip install pillow
 # 检查服务状态
 echo "📊 检查服务状态..."
 ps aux | grep sora_api.py | grep -v grep
