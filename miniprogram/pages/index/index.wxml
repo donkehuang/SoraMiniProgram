@@ -29,7 +29,7 @@
     </view>
 
     <!-- 主界面：显示功能卡片 -->
-    <view class="main-view" wx:if="{{!showCreateView && !isGenerating}}">
+    <view class="main-view" wx:if="{{!showCreateView && !showImageView && !isGenerating}}">
       <!-- 卡片1：立即进入创作（大卡片） -->
       <view class="card card-create" bindtap="enterCreate">
         <view class="card-icon">🎬</view>
@@ -59,6 +59,51 @@
           </view>
         </view>
       </view>
+    </view>
+
+    <!-- 生图界面：显示输入表单 -->
+    <view class="image-view" wx:if="{{showImageView && !isGenerating}}">
+      <!-- 返回按钮 -->
+      <view class="back-btn" bindtap="backToMain">
+        <text class="back-icon">←</text>
+        <text class="back-text">返回</text>
+      </view>
+
+      <!-- 输入区域 -->
+      <view class="input-section">
+        <view class="input-label">
+          <text class="label-icon">🖼️</text>
+          <text class="label-text">图片描述</text>
+        </view>
+        <textarea
+          class="prompt-input"
+          placeholder="请输入图片描述，例如：一只可爱的小猫在草地上玩耍..."
+          value="{{imagePrompt}}"
+          bindinput="onImagePromptInput"
+          maxlength="500"
+          auto-height
+        />
+        <text class="char-count">{{imagePrompt.length}}/500</text>
+      </view>
+
+      <!-- 设置区域 -->
+      <view class="settings-section">
+        <!-- 图片方向 -->
+        <view class="setting-item">
+          <view class="setting-label">
+            <text class="setting-icon">📐</text>
+            <text class="setting-text">图片方向</text>
+          </view>
+          <picker mode="selector" range="{{imageOrientationOptions}}" value="{{imageOrientationIndex}}" bindchange="onImageOrientationChange">
+            <view class="picker">{{imageOrientationOptions[imageOrientationIndex]}}</view>
+          </picker>
+        </view>
+      </view>
+
+      <!-- 生成按钮 -->
+      <button class="generate-btn" bindtap="generateImage">
+        生成图片
+      </button>
     </view>
 
     <!-- 创作界面：显示输入表单 -->
@@ -148,6 +193,25 @@
     <text class="progress-info">⏱️ 预计需要2分钟，请耐心等待</text>
 
       <button class="cancel-btn" bindtap="cancelGeneration" wx:if="{{!isUploading}}">取消生成</button>
+    </view>
+
+    <!-- 图片生成结果 -->
+    <view class="image-result-section" wx:if="{{imageUrl && !isGenerating}}">
+    <view class="result-header">
+      <text class="result-title">✅ 生成成功！</text>
+    </view>
+    <view class="image-display">
+      <image
+        class="generated-image"
+        src="{{imageUrl}}"
+        mode="aspectFit"
+        bindtap="previewImage"
+      />
+    </view>
+    <view class="image-actions">
+      <button class="action-btn" bindtap="saveImageToGallery">保存到相册</button>
+      <button class="action-btn secondary" bindtap="generateVideoFromImage">用此图片生成视频</button>
+    </view>
     </view>
 
     <!-- 视频播放区域 -->

@@ -1,7 +1,7 @@
 <view class="container">
   <!-- 返回按钮 - 左上角 -->
   <view class="back-btn" bindtap="goBack">
-    <text class="back-icon">←</text>
+    <text class="back-icon">✕</text>
   </view>
 
   <!-- 视频播放器 -->

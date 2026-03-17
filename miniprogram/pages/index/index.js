@@ -15,6 +15,13 @@ Page({
 
     // 界面状态
     showCreateView: false, // 是否显示创作界面
+    showImageView: false,  // 是否显示生图界面
+
+    // 生图相关
+    imagePrompt: '',
+    imageOrientationOptions: ['竖屏 9:16', '横屏 16:9'],
+    imageOrientationIndex: 0,  // 默认竖屏
+    imageUrl: '',  // 生成的图片URL
 
     // 预设prompt风格
     styleOptions: ['无风格'],
@@ -181,6 +188,19 @@ Page({
     })
   },
 
+  // ========== 生图功能 ==========
+  onImagePromptInput(e) {
+    this.setData({
+      imagePrompt: e.detail.value
+    })
+  },
+
+  onImageOrientationChange(e) {
+    this.setData({
+      imageOrientationIndex: parseInt(e.detail.value)
+    })
+  },
+
   // 卡片点击事件
   enterCreate() {
     console.log('[卡片] 进入创作界面')
@@ -190,10 +210,9 @@ Page({
   },
 
   enterImageGen() {
-    wx.showToast({
-      title: '生图功能即将上线',
-      icon: 'none',
-      duration: 2000
+    console.log('[卡片] 进入生图界面')
+    this.setData({
+      showImageView: true
     })
   },
 
@@ -208,7 +227,375 @@ Page({
   backToMain() {
     console.log('[返回] 回到主界面')
     this.setData({
-      showCreateView: false
+      showCreateView: false,
+      showImageView: false
+    })
+  },
+
+  // ========== 生图功能 ==========
+  async generateImage() {
+    const { imagePrompt, imageOrientationIndex, imageOrientationOptions, apiBaseUrl } = this.data
+
+    if (!imagePrompt.trim()) {
+      wx.showToast({
+        title: '请输入图片描述',
+        icon: 'none',
+        duration: 2000
+      })
+      return
+    }
+
+    // 清除之前的错误信息
+    this.setData({
+      errorMessage: '',
+      imageUrl: '',
+      isGenerating: true,
+      generationProgress: 10,
+      statusText: '准备生成图片...'
+    })
+
+    try {
+      // 根据方向设置orientation
+      const orientation = imageOrientationIndex === 0 ? 'vertical' : 'horizontal'  // 0=竖屏, 1=横屏
+
+      console.log('[开始] 创建图片生成任务...', { orientation })
+
+      this.setData({
+        generationProgress: 20,
+        statusText: '正在生成图片...'
+      })
+
+      // 调用生图API
+      const requestPromise = new Promise((resolve, reject) => {
+        console.log('[生图] 请求URL:', `${apiBaseUrl}/api/generate-image`)
+        wx.request({
+          url: `${apiBaseUrl}/api/generate-image`,
+          method: 'POST',
+          data: {
+            prompt: imagePrompt,
+            orientation: orientation
+          },
+          header: {
+            'content-type': 'application/json'
+          },
+          success: (res) => {
+            console.log('[生图] API响应状态码:', res.statusCode)
+            console.log('[生图] API响应数据:', res.data)
+            resolve(res)
+          },
+          fail: (err) => {
+            console.error('[生图] 请求失败:', err)
+            console.error('[生图] 错误详情:', JSON.stringify(err))
+            reject(new Error(`生图请求失败: ${err.errMsg}`))
+          }
+        })
+      })
+
+      const res = await requestPromise
+      console.log('[响应] 创建任务响应:', res.data)
+
+      // 检查响应数据
+      if (!res.data || !res.data.success) {
+        throw new Error(res.data?.error || '生成失败')
+      }
+
+      const imageUrl = res.data.imageUrl
+      console.log('[成功] 图片生成成功:', imageUrl)
+
+      // 下载图片到本地
+      this.setData({
+        generationProgress: 50,
+        statusText: '正在下载图片...'
+      })
+
+      const localPath = await this.downloadImageToLocal(imageUrl, apiBaseUrl)
+      console.log('[下载] 图片下载完成:', localPath)
+
+      // 上传到云存储
+      this.setData({
+        generationProgress: 70,
+        statusText: '正在上传到云存储...'
+      })
+
+      const timestamp = Date.now()
+      const cloudPath = `images/${timestamp}.png`
+      const uploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
+
+      console.log('[上传] 上传成功!')
+      console.log('[上传] fileID:', uploadResult.fileID)
+      console.log('[上传] URL:', uploadResult.tempFileURL)
+
+      // 保存图片信息到云数据库
+      this.setData({
+        generationProgress: 80,
+        statusText: '正在保存图片信息...'
+      })
+
+      await this.saveImageToDatabase(uploadResult, timestamp)
+
+      // 完成
+      this.setData({
+        isGenerating: false,
+        imageUrl: uploadResult.tempFileURL || uploadResult.fileID,
+        generationProgress: 100,
+        statusText: '生成完成！'
+      })
+
+      wx.showToast({
+        title: '图片已保存到作品',
+        icon: 'success',
+        duration: 2000
+      })
+
+      // 清理本地临时文件
+      wx.removeSavedFile({
+        filePath: localPath,
+        success: () => {
+          console.log('[清理] 本地临时文件已删除')
+        },
+        fail: (err) => {
+          console.warn('[清理] 删除临时文件失败:', err)
+        }
+      })
+
+    } catch (error) {
+      console.error('[错误] 生成图片失败:', error)
+      console.error('[错误] 错误堆栈:', error.stack)
+
+      const errorMsg = error.message || '生成失败，请检查API服务器是否正常运行'
+      console.error('[错误] 错误信息:', errorMsg)
+
+      this.setData({
+        errorMessage: errorMsg,
+        isGenerating: false,
+        generationProgress: 0,
+        imageUrl: ''
+      })
+
+      if (errorMsg.includes('request:fail') || errorMsg.includes('网络') || errorMsg.includes('timeout')) {
+        wx.showModal({
+          title: '网络错误',
+          content: '请检查网络连接或稍后重试',
+          showCancel: false
+        })
+      }
+    }
+  },
+
+  // 下载图片到本地临时目录
+  async downloadImageToLocal(imageUrl, apiBaseUrl) {
+    console.log('[下载] 开始下载图片到本地')
+
+    // imageUrl 是相对路径，需要拼接完整URL
+    const fullUrl = imageUrl.startsWith('http') ? imageUrl : `${apiBaseUrl}${imageUrl}`
+
+    console.log('[下载] 下载URL:', fullUrl)
+
+    return new Promise((resolve, reject) => {
+      wx.downloadFile({
+        url: fullUrl,
+        timeout: 60000,
+        success: (res) => {
+          console.log('[下载] 状态码:', res.statusCode)
+          console.log('[下载] 临时文件路径:', res.tempFilePath)
+
+          if (res.statusCode === 200) {
+            // 使用getFileInfo获取实际的文件大小
+            wx.getFileInfo({
+              filePath: res.tempFilePath,
+              success: (fileInfo) => {
+                console.log('[下载] 实际文件大小:', fileInfo.size, '字节')
+
+                if (fileInfo.size > 0) {
+                  console.log('[下载] ✅ 下载成功:', res.tempFilePath)
+                  resolve(res.tempFilePath)
+                } else {
+                  console.error('[下载] ❌ 文件大小为0')
+                  reject(new Error('下载的文件大小为0'))
+                }
+              },
+              fail: (err) => {
+                console.error('[下载] ❌ 获取文件信息失败:', err)
+                if (res.tempFilePath) {
+                  resolve(res.tempFilePath)
+                } else {
+                  reject(new Error('下载失败: 无法验证文件'))
+                }
+              }
+            })
+          } else {
+            console.error('[下载] ❌ HTTP错误:', res.statusCode)
+            reject(new Error(`下载失败: HTTP ${res.statusCode}`))
+          }
+        },
+        fail: (err) => {
+          console.error('[下载] 下载失败:', err)
+
+          if (err.errMsg && err.errMsg.includes('timeout')) {
+            reject(new Error('下载超时'))
+          } else {
+            reject(new Error(err.errMsg || '下载失败'))
+          }
+        }
+      })
+    })
+  },
+
+  // 保存图片信息到云数据库
+  async saveImageToDatabase(uploadResult, timestamp) {
+    try {
+      const db = wx.cloud.database()
+
+      // 获取当前用户信息
+      const userInfo = wx.getStorageSync('userInfo')
+
+      // 再次检查登录状态
+      if (!userInfo || !userInfo.nickName) {
+        throw new Error('用户未登录，无法保存作品')
+      }
+
+      // 格式化日期
+      const date = new Date(timestamp)
+      const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+
+      // 获取图片方向
+      const orientation = this.data.imageOrientationIndex === 0 ? 'vertical' : 'horizontal'
+      const size = this.data.imageOrientationIndex === 0 ? '720x1280' : '1280x720'
+
+      const imageData = {
+        type: 'image',  // 类型：图片
+        prompt: this.data.imagePrompt,
+        orientation: orientation,
+        size: size,
+        fileID: uploadResult.fileID,
+        httpURL: uploadResult.tempFileURL || uploadResult.fileID,
+        status: 'completed',
+        createTime: db.serverDate(),
+        date: dateStr,
+        timestamp: timestamp,
+        userInfo: {
+          nickName: userInfo.nickName,
+          avatarUrl: userInfo.avatarUrl
+        },
+        viewCount: 0,
+        likeCount: 0
+      }
+
+      console.log('[数据库] 保存图片信息:', imageData)
+
+      // 保存到云数据库
+      const res = await db.collection('images').add({
+        data: imageData
+      })
+
+      console.log('[数据库] 保存成功:', res._id)
+
+    } catch (error) {
+      console.error('[数据库] 保存失败:', error)
+
+      if (error.errCode === -502003 || error.message.includes('permission denied')) {
+        wx.showModal({
+          title: '保存失败',
+          content: '数据库权限不足，请退出重新登录',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              wx.removeStorageSync('userInfo')
+              wx.switchTab({
+                url: '/pages/profile/profile'
+              })
+            }
+          }
+        })
+      } else {
+        wx.showToast({
+          title: '作品保存失败',
+          icon: 'none'
+        })
+      }
+
+      throw error
+    }
+  },
+
+  // 预览图片
+  previewImage() {
+    if (!this.data.imageUrl) return
+
+    wx.previewImage({
+      current: this.data.imageUrl,
+      urls: [this.data.imageUrl]
+    })
+  },
+
+  // 保存图片到相册
+  saveImageToGallery() {
+    if (!this.data.imageUrl) return
+
+    wx.showLoading({
+      title: '保存中...'
+    })
+
+    wx.downloadFile({
+      url: this.data.imageUrl,
+      success: (res) => {
+        wx.saveImageToPhotosAlbum({
+          filePath: res.tempFilePath,
+          success: () => {
+            wx.hideLoading()
+            wx.showToast({
+              title: '已保存到相册',
+              icon: 'success'
+            })
+          },
+          fail: (err) => {
+            wx.hideLoading()
+            if (err.errMsg.includes('auth deny')) {
+              wx.showModal({
+                title: '需要授权',
+                content: '请在设置中允许访问相册',
+                showCancel: false
+              })
+            } else {
+              wx.showToast({
+                title: '保存失败',
+                icon: 'none'
+              })
+            }
+          }
+        })
+      },
+      fail: () => {
+        wx.hideLoading()
+        wx.showToast({
+          title: '下载失败',
+          icon: 'none'
+        })
+      }
+    })
+  },
+
+  // 用图片生成视频
+  generateVideoFromImage() {
+    if (!this.data.imageUrl) return
+
+    // 提示用户需要切换到视频生成界面
+    wx.showModal({
+      title: '提示',
+      content: '即将跳转到视频生成界面，您可以在那里输入提示词并使用此图片作为参考',
+      success: (res) => {
+        if (res.confirm) {
+          // 返回主界面，然后进入创作界面
+          this.setData({
+            showImageView: false
+          })
+          setTimeout(() => {
+            this.setData({
+              showCreateView: true
+            })
+          }, 300)
+        }
+      }
     })
   },
 

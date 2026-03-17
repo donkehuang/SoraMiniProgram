@@ -9,30 +9,35 @@
 /* ========== 返回按钮 - 左上角 ========== */
 .back-btn {
   position: fixed;
-  top: 40rpx;
-  left: 40rpx;
+  top: 80rpx;
+  left: 30rpx;
   z-index: 100;
-  width: 72rpx;
-  height: 72rpx;
+  width: 88rpx;
+  height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 36rpx;
-  backdrop-filter: blur(20rpx);
-  -webkit-backdrop-filter: blur(20rpx);
-  transition: all 0.3s;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
+  border-radius: 50%;
+  backdrop-filter: blur(30rpx);
+  -webkit-backdrop-filter: blur(30rpx);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .back-btn:active {
   transform: scale(0.9);
-  background: rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.4) 100%);
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.4);
 }
 
 .back-icon {
-  font-size: 36rpx;
+  font-size: 42rpx;
   color: white;
-  font-weight: bold;
+  font-weight: 300;
+  letter-spacing: 2rpx;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.5);
 }
 
 /* ========== 视频容器 ========== */

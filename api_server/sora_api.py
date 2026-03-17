@@ -5,8 +5,10 @@ import time
 import os
 import logging
 import threading
+import base64
 from pathlib import Path
 from dotenv import load_dotenv
+from PIL import Image
 
 # 加载环境变量
 load_dotenv()
@@ -33,8 +35,11 @@ CORS(app, resources={
 
 # 配置 - 使用绝对路径避免路径问题
 VIDEOS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_videos")
+IMAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_images")
 print(f"[配置] 视频存储目录: {VIDEOS_DIR}")
+print(f"[配置] 图片存储目录: {IMAGES_DIR}")
 Path(VIDEOS_DIR).mkdir(exist_ok=True)
+Path(IMAGES_DIR).mkdir(exist_ok=True)
 
 # 存储视频任务状态
 video_tasks = {}  # {video_id: {status, progress, local_path, error}}
@@ -514,6 +519,242 @@ def list_tasks():
             'progress': v['progress']
         } for k, v in video_tasks.items()}
     })
+
+
+@app.route('/api/generate-image', methods=['POST', 'OPTIONS'])
+def generate_image():
+    """生成图片的API接口"""
+
+    # 处理预检请求
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        print(f"[请求] 收到图片生成请求")
+
+        data = request.json
+        if not data:
+            print("[错误] 请求数据为空")
+            return jsonify({
+                'success': False,
+                'error': '请求数据格式错误'
+            }), 400
+
+        prompt = data.get('prompt', '')
+        orientation = data.get('orientation', 'vertical')  # vertical (9:16) or horizontal (16:9)
+
+        print(f"[参数] prompt: {prompt[:50]}..., orientation: {orientation}")
+
+        if not prompt:
+            print("[错误] prompt为空")
+            return jsonify({
+                'success': False,
+                'error': '请输入图片描述'
+            }), 400
+
+        # 根据方向设置尺寸
+        if orientation == 'vertical':
+            size = "1024x1536"  # 竖屏 2:3
+        else:
+            size = "1536x1024"  # 横屏 3:2
+
+        print(f"[参数] 生成尺寸: {size}")
+
+        # 调用OpenAI DALL-E API生成图片
+        print("[开始] 开始调用OpenAI DALL-E API...")
+
+        try:
+            response = client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                size=size,
+                quality="standard",
+                n=1,
+                response_format="b64_json"
+            )
+
+            print(f"[成功] 图片生成成功")
+
+            # 获取base64编码的图片
+            image_data = response.data[0]
+            image_b64 = image_data.b64_json
+
+            # 解码base64为bytes
+            image_bytes = base64.b64decode(image_b64)
+
+            # 生成文件名
+            timestamp = int(time.time())
+            filename = f"image_{timestamp}.png"
+            filepath = os.path.join(IMAGES_DIR, filename)
+
+            # 保存图片
+            with open(filepath, 'wb') as f:
+                f.write(image_bytes)
+
+            print(f"[保存] 图片已保存: {filepath}")
+            print(f"[保存] 文件大小: {len(image_bytes)} 字节")
+
+            # 裁剪图片为Sora兼容的尺寸
+            try:
+                print("[裁剪] 开始裁剪图片为Sora尺寸...")
+
+                if orientation == 'vertical':
+                    # 竖屏：720x1280
+                    cropped_filename = f"image_{timestamp}_cropped.png"
+                    cropped_filepath = os.path.join(IMAGES_DIR, cropped_filename)
+                    crop_image_to_sora_size(filepath, cropped_filepath, 720, 1280)
+                    print(f"[裁剪] 竖屏裁剪完成: {cropped_filepath}")
+                else:
+                    # 横屏：1280x720
+                    cropped_filename = f"image_{timestamp}_cropped.png"
+                    cropped_filepath = os.path.join(IMAGES_DIR, cropped_filename)
+                    crop_image_to_sora_size(filepath, cropped_filepath, 1280, 720)
+                    print(f"[裁剪] 横屏裁剪完成: {cropped_filepath}")
+
+                # 返回裁剪后的图片URL
+                response_data = {
+                    'success': True,
+                    'imageUrl': f'/images/{cropped_filename}',
+                    'originalImageUrl': f'/images/{filename}',
+                    'orientation': orientation,
+                    'size': size
+                }
+
+            except Exception as crop_error:
+                print(f"[错误] 图片裁剪失败: {crop_error}")
+                # 裁剪失败，返回原始图片
+                response_data = {
+                    'success': True,
+                    'imageUrl': f'/images/{filename}',
+                    'orientation': orientation,
+                    'size': size
+                }
+
+            print(f"[响应] 返回图片信息: {response_data}")
+            return jsonify(response_data), 200
+
+        except Exception as api_error:
+            print(f"[错误] OpenAI API调用失败: {api_error}")
+            import traceback
+            traceback.print_exc()
+
+            # 特殊处理审核拦截错误
+            error_msg = str(api_error)
+            if 'moderation' in error_msg.lower() or 'blocked' in error_msg.lower():
+                error_msg = "请求被内容审核系统拦截。请修改提示词，避免包含敏感内容(暴力、色情、仇恨言论等)。"
+
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 500
+
+    except Exception as e:
+        print(f"[错误] 服务器异常: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'服务器错误: {str(e)}'
+        }), 500
+
+
+def crop_image_to_sora_size(input_path, output_path, target_width, target_height):
+    """
+    将图片裁剪为Sora兼容的指定尺寸
+
+    参数:
+    input_path: 输入图片路径
+    output_path: 输出图片路径
+    target_width: 目标宽度 (720 或 1280)
+    target_height: 目标高度 (1280 或 720)
+    """
+    try:
+        # 打开图片
+        with Image.open(input_path) as img:
+            # 计算裁剪区域（居中裁剪）
+            original_width, original_height = img.size
+
+            print(f"[裁剪] 原始尺寸: {original_width}x{original_height}")
+            print(f"[裁剪] 目标尺寸: {target_width}x{target_height}")
+
+            # 计算目标宽高比和原始宽高比
+            target_ratio = target_width / target_height
+            original_ratio = original_width / original_height
+
+            # 根据比例决定裁剪方式
+            if original_ratio > target_ratio:
+                # 原始图片更宽，按高度裁剪宽度
+                new_width = int(target_ratio * original_height)
+                left = (original_width - new_width) // 2
+                right = left + new_width
+                top = 0
+                bottom = original_height
+            else:
+                # 原始图片更高，按宽度裁剪高度
+                new_height = int(original_width / target_ratio)
+                top = (original_height - new_height) // 2
+                bottom = top + new_height
+                left = 0
+                right = original_width
+
+            # 裁剪图片
+            cropped_img = img.crop((left, top, right, bottom))
+
+            # 调整到目标尺寸
+            resized_img = cropped_img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+            # 保存裁剪后的图片
+            resized_img.save(output_path, 'PNG', quality=95)
+            print(f"[裁剪] 图片已成功裁剪并保存至: {output_path}")
+
+    except Exception as e:
+        print(f"[错误] 处理图片时出错: {e}")
+        raise
+
+
+@app.route('/images/<filename>', methods=['GET', 'HEAD'])
+def serve_image(filename):
+    """提供图片文件"""
+    try:
+        print(f"[图片服务] ============ 收到图片请求 ============")
+        print(f"[图片服务] 请求图片: {filename}")
+
+        # 检查文件是否存在
+        file_path = os.path.join(IMAGES_DIR, filename)
+        file_path_abs = os.path.abspath(file_path)
+
+        if not os.path.exists(file_path_abs):
+            print(f"[图片服务] ❌ 文件不存在: {file_path_abs}")
+            return jsonify({'error': '图片文件不存在', 'requested': filename}), 404
+
+        file_size = os.path.getsize(file_path_abs)
+        print(f"[图片服务] ✅ 找到文件，大小: {file_size} 字节")
+
+        # 如果是HEAD请求，只返回响应头
+        if request.method == 'HEAD':
+            print(f"[图片服务] HEAD请求，只返回响应头")
+            from flask import Response
+            response = Response()
+            response.headers['Content-Type'] = 'image/png'
+            response.headers['Content-Length'] = str(file_size)
+            print(f"[图片服务] HEAD响应: Content-Length={file_size}")
+            return response
+
+        # 发送图片文件
+        print(f"[图片服务] 准备发送文件...")
+        response = send_file(
+            file_path_abs,
+            mimetype='image/png',
+            as_attachment=False
+        )
+        print(f"[图片服务] ✅ 返回图片文件")
+        return response
+
+    except Exception as e:
+        print(f"[图片服务] ❌ 错误: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'服务器错误: {str(e)}'}), 500
 
 
 if __name__ == '__main__':
