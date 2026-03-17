@@ -120,6 +120,19 @@ if sudo netstat -tulpn | grep :5000 | grep -q LISTEN; then
     sleep 2
 fi
 
+# 再次检查并停止所有Python进程占用5000端口
+if sudo lsof -i :5000 &>/dev/null; then
+    echo "⚠️ 发现进程仍占用5000端口，强制终止..."
+    sudo lsof -t -i :5000 | xargs -r kill -9 2>/dev/null || true
+    sleep 3
+fi
+
+# 最终确认
+if sudo netstat -tulpn | grep :5000 | grep -q LISTEN; then
+    echo "❌ 警告：5000端口仍被占用，可能导致服务启动失败"
+    sudo lsof -i :5000
+fi
+
 # 激活虚拟环境
 echo "📦 激活虚拟环境..."
 source venv/bin/activate
