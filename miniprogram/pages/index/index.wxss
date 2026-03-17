@@ -183,6 +183,74 @@
   backdrop-filter: blur(10rpx);
 }
 
+/* 优化图片区域 */
+.optimize-section {
+  margin-top: 32rpx;
+  padding-top: 32rpx;
+  border-top: 2rpx solid #e0e0e0;
+}
+
+.optimize-header {
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+
+.optimize-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.optimize-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.optimize-input-wrapper {
+  background: #f8f9fa;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  border: 2rpx solid #e0e0e0;
+}
+
+.optimize-input {
+  width: 100%;
+  min-height: 120rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+  color: #333;
+  background: transparent;
+}
+
+.optimize-input::placeholder {
+  color: #ccc;
+}
+
+.optimize-btn {
+  width: 100%;
+  height: 88rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 28rpx;
+  font-weight: bold;
+  border-radius: 48rpx;
+  border: none;
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.4);
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.optimize-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
+}
+
 .image-display {
   margin: 24rpx 0;
   display: flex;

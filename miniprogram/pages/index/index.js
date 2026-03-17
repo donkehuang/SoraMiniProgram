@@ -23,6 +23,7 @@ Page({
     imageOrientationOptions: ['竖屏 9:16', '横屏 16:9'],
     imageOrientationIndex: 0,  // 默认竖屏
     imageUrl: '',  // 生成的图片URL
+    optimizePrompt: '',  // 优化图片的提示词
 
     // 预设prompt风格
     styleOptions: ['无风格'],
@@ -193,6 +194,13 @@ Page({
   onImagePromptInput(e) {
     this.setData({
       imagePrompt: e.detail.value
+    })
+  },
+
+  // 优化图片提示词输入
+  onOptimizePromptInput(e) {
+    this.setData({
+      optimizePrompt: e.detail.value
     })
   },
 
@@ -588,6 +596,155 @@ Page({
         })
       }
     })
+  },
+
+  // 优化图片
+  async optimizeImage() {
+    const { optimizePrompt, imageOrientationIndex, imageOrientationOptions, apiBaseUrl } = this.data
+
+    if (!optimizePrompt.trim()) {
+      wx.showToast({
+        title: '请输入优化提示词',
+        icon: 'none',
+        duration: 2000
+      })
+      return
+    }
+
+    // 清除之前的错误信息
+    this.setData({
+      errorMessage: '',
+      isGenerating: true,
+      generationProgress: 10,
+      statusText: '准备优化图片...'
+    })
+
+    try {
+      // 根据方向设置orientation
+      const orientation = imageOrientationIndex === 0 ? 'vertical' : 'horizontal'  // 0=竖屏, 1=横屏
+
+      console.log('[优化] 开始优化图片...', { orientation })
+
+      this.setData({
+        generationProgress: 20,
+        statusText: '正在优化图片...'
+      })
+
+      // 调用生图API
+      const requestPromise = new Promise((resolve, reject) => {
+        console.log('[生图] 请求URL:', `${apiBaseUrl}/api/generate-image`)
+        wx.request({
+          url: `${apiBaseUrl}/api/generate-image`,
+          method: 'POST',
+          data: {
+            prompt: optimizePrompt,
+            orientation: orientation
+          },
+          header: {
+            'content-type': 'application/json'
+          },
+          success: (res) => {
+            console.log('[生图] API响应状态码:', res.statusCode)
+            console.log('[生图] API响应数据:', res.data)
+            resolve(res)
+          },
+          fail: (err) => {
+            console.error('[生图] 请求失败:', err)
+            console.error('[生图] 错误详情:', JSON.stringify(err))
+            reject(new Error(`优化图片请求失败: ${err.errMsg}`))
+          }
+        })
+      })
+
+      const res = await requestPromise
+      console.log('[响应] 优化任务响应:', res.data)
+
+      // 检查响应数据
+      if (!res.data || !res.data.success) {
+        throw new Error(res.data?.error || '优化失败')
+      }
+
+      const newImageUrl = res.data.imageUrl
+      console.log('[成功] 图片优化成功:', newImageUrl)
+
+      // 下载新图片到本地
+      this.setData({
+        generationProgress: 50,
+        statusText: '正在下载图片...'
+      })
+
+      const localPath = await this.downloadImageToLocal(newImageUrl, apiBaseUrl)
+      console.log('[下载] 新图片下载完成:', localPath)
+
+      // 上传到云存储
+      this.setData({
+        generationProgress: 70,
+        statusText: '正在上传到云存储...'
+      })
+
+      const timestamp = Date.now()
+      const cloudPath = `images/${timestamp}.png`
+      const uploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
+
+      console.log('[上传] 上传成功!')
+      console.log('[上传] fileID:', uploadResult.fileID)
+      console.log('[上传] URL:', uploadResult.tempFileURL)
+
+      // 保存图片信息到云数据库
+      this.setData({
+        generationProgress: 80,
+        statusText: '正在保存图片信息...'
+      })
+
+      await this.saveImageToDatabase(uploadResult, timestamp)
+
+      // 完成
+      this.setData({
+        isGenerating: false,
+        imageUrl: uploadResult.tempFileURL || uploadResult.fileID,
+        optimizePrompt: '',  // 清空优化提示词
+        generationProgress: 100,
+        statusText: '优化完成！'
+      })
+
+      wx.showToast({
+        title: '图片已优化',
+        icon: 'success',
+        duration: 2000
+      })
+
+      // 清理本地临时文件
+      wx.removeSavedFile({
+        filePath: localPath,
+        success: () => {
+          console.log('[清理] 本地临时文件已删除')
+        },
+        fail: (err) => {
+          console.warn('[清理] 删除临时文件失败:', err)
+        }
+      })
+
+    } catch (error) {
+      console.error('[错误] 优化图片失败:', error)
+      console.error('[错误] 错误堆栈:', error.stack)
+
+      const errorMsg = error.message || '优化失败，请检查API服务器是否正常运行'
+      console.error('[错误] 错误信息:', errorMsg)
+
+      this.setData({
+        errorMessage: errorMsg,
+        isGenerating: false,
+        generationProgress: 0
+      })
+
+      if (errorMsg.includes('request:fail') || errorMsg.includes('网络') || errorMsg.includes('timeout')) {
+        wx.showModal({
+          title: '网络错误',
+          content: '请检查网络连接或稍后重试',
+          showCancel: false
+        })
+      }
+    }
   },
 
   // 用图片生成视频

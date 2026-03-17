@@ -212,6 +212,28 @@
       <button class="action-btn" bindtap="saveImageToGallery">保存到相册</button>
       <button class="action-btn secondary" bindtap="generateVideoFromImage">用此图片生成视频</button>
     </view>
+    
+    <!-- 优化图片区域 -->
+    <view class="optimize-section">
+      <view class="optimize-header">
+        <text class="optimize-title">🎨 不满意？继续优化</text>
+        <text class="optimize-desc">输入新的提示词来改进图片效果</text>
+      </view>
+      <view class="optimize-input-wrapper">
+        <textarea
+          class="optimize-input"
+          placeholder="例如：增加更多细节，改变风格，调整颜色..."
+          value="{{optimizePrompt}}"
+          bindinput="onOptimizePromptInput"
+          maxlength="300"
+          auto-height
+        />
+        <text class="char-count">{{optimizePrompt.length}}/300</text>
+      </view>
+      <button class="optimize-btn" bindtap="optimizeImage">
+        ✨ 优化图片
+      </button>
+    </view>
     </view>
 
     <!-- 视频播放区域 -->
