@@ -11,6 +11,7 @@ cd /home/admin/SoraMiniProgram/api_server || exit 1
 echo ""
 echo "🛑 停止所有 gunicorn 进程..."
 pkill -9 -f gunicorn 2>/dev/null || echo "没有找到 gunicorn 进程"
+killall -9 gunicorn 2>/dev/null || true
 
 # 停止所有 sora_api.py 进程
 echo "🛑 停止所有 sora_api.py 进程..."
@@ -23,6 +24,13 @@ if sudo lsof -t -i :5000 &>/dev/null; then
     echo "✅ 已终止"
 else
     echo "没有进程占用 5000 端口"
+fi
+
+# 直接 kill 掉所有 gunicorn PID（如果存在）
+if ps aux | grep -v grep | grep gunicorn > /dev/null; then
+    echo "🛑 发现残留 gunicorn 进程，强制终止..."
+    ps aux | grep -v grep | grep gunicorn | awk '{print $2}' | xargs -r kill -9
+    echo "✅ 已终止残留进程"
 fi
 
 # 等待端口释放
