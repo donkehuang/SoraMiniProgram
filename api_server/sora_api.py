@@ -595,34 +595,61 @@ def generate_image():
             print(f"[保存] 图片已保存: {filepath}")
             print(f"[保存] 文件大小: {len(image_bytes)} 字节")
 
+            # 验证文件是否存在
+            if not os.path.exists(filepath):
+                print(f"[错误] 文件未成功创建: {filepath}")
+                return jsonify({
+                    'success': False,
+                    'error': '图片文件保存失败'
+                }), 500
+
+            file_size = os.path.getsize(filepath)
+            print(f"[验证] 文件验证成功，大小: {file_size} 字节")
+
             # 裁剪图片为Sora兼容的尺寸
             try:
                 print("[裁剪] 开始裁剪图片为Sora尺寸...")
 
-                if orientation == 'vertical':
-                    # 竖屏：720x1280
-                    cropped_filename = f"image_{timestamp}_cropped.png"
-                    cropped_filepath = os.path.join(IMAGES_DIR, cropped_filename)
-                    crop_image_to_sora_size(filepath, cropped_filepath, 720, 1280)
-                    print(f"[裁剪] 竖屏裁剪完成: {cropped_filepath}")
-                else:
-                    # 横屏：1280x720
-                    cropped_filename = f"image_{timestamp}_cropped.png"
-                    cropped_filepath = os.path.join(IMAGES_DIR, cropped_filename)
-                    crop_image_to_sora_size(filepath, cropped_filepath, 1280, 720)
-                    print(f"[裁剪] 横屏裁剪完成: {cropped_filepath}")
+                # 检查PIL是否可用
+                try:
+                    from PIL import Image
+                    print("[裁剪] PIL/Pillow 模块可用")
 
-                # 返回裁剪后的图片URL
-                response_data = {
-                    'success': True,
-                    'imageUrl': f'/images/{cropped_filename}',
-                    'originalImageUrl': f'/images/{filename}',
-                    'orientation': orientation,
-                    'size': size
-                }
+                    if orientation == 'vertical':
+                        # 竖屏：720x1280
+                        cropped_filename = f"image_{timestamp}_cropped.png"
+                        cropped_filepath = os.path.join(IMAGES_DIR, cropped_filename)
+                        crop_image_to_sora_size(filepath, cropped_filepath, 720, 1280)
+                        print(f"[裁剪] 竖屏裁剪完成: {cropped_filepath}")
+                    else:
+                        # 横屏：1280x720
+                        cropped_filename = f"image_{timestamp}_cropped.png"
+                        cropped_filepath = os.path.join(IMAGES_DIR, cropped_filename)
+                        crop_image_to_sora_size(filepath, cropped_filepath, 1280, 720)
+                        print(f"[裁剪] 横屏裁剪完成: {cropped_filepath}")
+
+                    # 返回裁剪后的图片URL
+                    response_data = {
+                        'success': True,
+                        'imageUrl': f'/images/{cropped_filename}',
+                        'originalImageUrl': f'/images/{filename}',
+                        'orientation': orientation,
+                        'size': size
+                    }
+
+                except ImportError:
+                    print("[警告] PIL/Pillow 模块未安装，跳过裁剪，返回原始图片")
+                    response_data = {
+                        'success': True,
+                        'imageUrl': f'/images/{filename}',
+                        'orientation': orientation,
+                        'size': size
+                    }
 
             except Exception as crop_error:
                 print(f"[错误] 图片裁剪失败: {crop_error}")
+                import traceback
+                traceback.print_exc()
                 # 裁剪失败，返回原始图片
                 response_data = {
                     'success': True,

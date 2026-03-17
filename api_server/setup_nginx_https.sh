@@ -120,16 +120,25 @@ if sudo netstat -tulpn | grep :5000 | grep -q LISTEN; then
     sleep 2
 fi
 
+# 激活虚拟环境
+echo "📦 激活虚拟环境..."
+source venv/bin/activate
+
+# 安装依赖
+echo "📦 安装 Python 依赖..."
+pip install -q pillow
+echo "✅ Pillow 安装完成"
+
+# 验证安装
+python -c "from PIL import Image; print('✅ PIL/Pillow 验证成功')"
+
 # 启动新服务
 echo "🚀 启动新的 Flask 服务..."
-source venv/bin/activate
 nohup python sora_api.py > server.log 2>&1 &
 
 # 等待服务启动
 sleep 5
 
-# 安装pillow
-pip install pillow
 # 检查服务状态
 echo "📊 检查服务状态..."
 ps aux | grep sora_api.py | grep -v grep
