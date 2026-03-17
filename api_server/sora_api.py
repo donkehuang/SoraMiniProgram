@@ -746,10 +746,23 @@ def serve_image(filename):
     try:
         print(f"[图片服务] ============ 收到图片请求 ============")
         print(f"[图片服务] 请求图片: {filename}")
+        print(f"[图片服务] IMAGES_DIR: {IMAGES_DIR}")
+        print(f"[图片服务] IMAGES_DIR绝对路径: {os.path.abspath(IMAGES_DIR)}")
+
+        # 列出目录中的所有文件
+        try:
+            all_files = os.listdir(IMAGES_DIR)
+            print(f"[图片服务] 目录中的文件数量: {len(all_files)}")
+            if all_files:
+                print(f"[图片服务] 文件列表: {all_files[:10]}...")  # 显示前10个文件
+        except Exception as e:
+            print(f"[图片服务] 读取目录失败: {e}")
 
         # 检查文件是否存在
         file_path = os.path.join(IMAGES_DIR, filename)
         file_path_abs = os.path.abspath(file_path)
+        print(f"[图片服务] 检查文件路径: {file_path_abs}")
+        print(f"[图片服务] 文件是否存在: {os.path.exists(file_path_abs)}")
 
         if not os.path.exists(file_path_abs):
             print(f"[图片服务] ❌ 文件不存在: {file_path_abs}")
