@@ -446,6 +446,20 @@ Page({
     try {
       const db = wx.cloud.database()
 
+      // 确保集合存在（如果不存在会自动创建）
+      try {
+        await db.collection('images').doc('init').get()
+      } catch (e) {
+        // 集合不存在，添加一条初始化数据来创建集合
+        await db.collection('images').add({
+          data: {
+            _id: 'init',
+            type: 'init',
+            createdAt: new Date()
+          }
+        })
+      }
+
       // 获取当前用户信息
       const userInfo = wx.getStorageSync('userInfo')
 
