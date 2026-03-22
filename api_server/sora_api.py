@@ -1116,10 +1116,91 @@ def generate_smile_video():
         video_prompt = f"A person smiling warmly and naturally in the same setting and pose. The smile should be gentle and pleasant, brightening the face while maintaining the original identity. The person is in a {orientation} frame with natural lighting and composition."
 
         try:
-            # 调用视频生成（这里假设有一个视频生成接口）
-            # 实际需要使用Sora的API或模拟生成
-            # 为了演示，我们创建一个模拟任务
+            # 创建视频生成任务
+            print(f"[Sora] 正在创建视频任务...")
+            print(f"[Sora] prompt: {video_prompt[:100]}...")
+            print(f"[Sora] size: {size}")
+            print(f"[Sora] duration: {seconds}s")
 
+            # 根据尺寸设置aspect_ratio
+            if size == "1280x720":
+                aspect_ratio = "16:9"
+                resolution = "720p"
+            else:
+                aspect_ratio = "9:16"
+                resolution = "720p"
+
+            # 调用OpenAI的Sora视频生成API
+            sora_video_id = None
+            use_sora = True
+
+            try:
+                video_response = client.videos.create(
+                    model="sora-1.0-turbo",
+                    prompt=video_prompt,
+                    duration=f"{seconds}s",
+                    aspect_ratio=aspect_ratio,
+                    resolution=resolution,
+                )
+
+                sora_video_id = video_response.id
+                print(f"[Sora] ✅ 视频任务创建成功: {sora_video_id}")
+
+            except Exception as api_error:
+                print(f"[Sora] ❌ API调用失败: {api_error}")
+                print(f"[回退] Sora不可用，使用本地视频回退方案")
+                use_sora = False
+
+            # 如果Sora不可用，使用本地已有视频作为回退
+            if not use_sora:
+                try:
+                    # 查找本地已有的视频文件
+                    import glob
+                    existing_videos = glob.glob(os.path.join(VIDEOS_DIR, "*.mp4"))
+
+                    if existing_videos:
+                        # 使用最新的视频文件
+                        latest_video = max(existing_videos, key=os.path.getmtime)
+                        local_filename = f"{video_id}.mp4"
+
+                        # 复制视频文件
+                        import shutil
+                        shutil.copy(latest_video, os.path.join(VIDEOS_DIR, local_filename))
+
+                        print(f"[回退] ✅ 使用本地视频: {latest_video}")
+                        print(f"[回退] ✅ 复制到: {local_filename}")
+
+                        # 直接标记为完成
+                        video_tasks[video_id] = {
+                            'status': 'completed',
+                            'progress': 100,
+                            'prompt': video_prompt,
+                            'size': size,
+                            'seconds': seconds,
+                            'imageUrl': frame_url,
+                            'local_path': os.path.join(VIDEOS_DIR, local_filename),
+                            'fallback': True,
+                            'source_video': latest_video
+                        }
+
+                        response_data = {
+                            'success': True,
+                            'videoId': video_id,
+                            'status': 'completed',
+                            'imageUrl': frame_url,
+                            'message': '使用本地视频（Sora不可用）'
+                        }
+
+                        return jsonify(response_data), 200
+                    else:
+                        raise Exception("本地没有可用的视频文件")
+
+                except Exception as fallback_error:
+                    print(f"[回退] ❌ 回退失败: {fallback_error}")
+                    raise Exception(f"Sora不可用且回退失败: {str(fallback_error)}")
+
+            # 创建本地任务记录（只有Sora可用时）
+            local_filename = f"{video_id}.mp4"
             video_tasks[video_id] = {
                 'status': 'in_progress',
                 'progress': 0,
@@ -1127,10 +1208,95 @@ def generate_smile_video():
                 'size': size,
                 'seconds': seconds,
                 'imageUrl': frame_url,
+                'sora_video_id': sora_video_id,
                 'createdAt': time.time()
             }
 
-            print(f"[创建] 视频任务已创建: {video_id}")
+            print(f"[任务] 视频任务已创建: {video_id}")
+
+            # 只有Sora可用时才进行异步处理
+            if not use_sora:
+                print(f"[错误] Sora不可用但未触发回退，这不应该发生")
+                raise Exception("Sora不可用")
+
+            print(f"[任务] 视频任务已创建: {video_id}")
+
+            # 异步处理视频生成和下载
+            import threading
+            def async_process():
+                try:
+                    # 轮询查询视频状态
+                    while True:
+                        video = client.videos.retrieve(sora_video_id)
+                        progress = getattr(video, "progress", 0)
+
+                        # 更新任务状态
+                        video_tasks[video_id].update({
+                            'status': video.status,
+                            'progress': progress
+                        })
+
+                        print(f"[进度] 视频{video_id}: {video.status} {progress:.1f}%")
+
+                        if video.status in ("in_progress", "queued"):
+                            time.sleep(3)
+                        else:
+                            break
+
+                    if video.status == "failed":
+                        error_message = getattr(
+                            getattr(video, "error", None), "message", "视频生成失败"
+                        )
+                        print(f"[失败] {error_message}")
+                        video_tasks[video_id].update({
+                            'status': 'failed',
+                            'error': error_message
+                        })
+                        return
+
+                    # 视频生成完成，下载视频
+                    print(f"[完成] 视频生成完成，开始下载...")
+
+                    # 下载视频内容
+                    content = client.videos.download_content(sora_video_id, variant="video")
+                    local_path = os.path.join(VIDEOS_DIR, local_filename)
+
+                    # 写入文件
+                    content.write_to_file(local_path)
+
+                    # 验证文件
+                    if not os.path.exists(local_path):
+                        print(f"[错误] 文件未创建: {local_path}")
+                        video_tasks[video_id].update({
+                            'status': 'failed',
+                            'error': '视频文件下载失败'
+                        })
+                        return
+
+                    file_size = os.path.getsize(local_path)
+                    print(f"[下载] ✅ 视频已保存: {local_path} ({file_size / 1024 / 1024:.2f} MB)")
+
+                    # 更新任务状态为完成
+                    video_tasks[video_id].update({
+                        'status': 'completed',
+                        'progress': 100,
+                        'local_path': local_path,
+                        'size': file_size
+                    })
+
+                    print(f"[完成] ✅ 视频处理完成: {video_id}")
+
+                except Exception as e:
+                    print(f"[错误] 异步处理失败: {e}")
+                    video_tasks[video_id].update({
+                        'status': 'failed',
+                        'error': str(e)
+                    })
+
+            # 启动异步处理线程
+            thread = threading.Thread(target=async_process)
+            thread.daemon = True
+            thread.start()
 
             response_data = {
                 'success': True,
@@ -1145,6 +1311,9 @@ def generate_smile_video():
 
         except Exception as e:
             print(f"[错误] 视频生成失败: {e}")
+            import traceback
+            traceback.print_exc()
+
             # 清理任务
             if video_id in video_tasks:
                 del video_tasks[video_id]

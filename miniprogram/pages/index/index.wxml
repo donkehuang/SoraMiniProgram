@@ -1,11 +1,11 @@
 <view class="container">
   <!-- 背景视频 -->
-  <video 
+  <video
     wx:if="{{showBackgroundVideo && backgroundVideoUrl}}"
-    class="background-video" 
-    src="{{backgroundVideoUrl}}" 
-    autoplay 
-    loop 
+    class="background-video"
+    src="{{backgroundVideoUrl}}"
+    autoplay
+    loop
     muted
     show-center-play-btn="{{false}}"
     show-play-btn="{{false}}"
@@ -28,53 +28,90 @@
       <text class="subtitle">文字生视频 · 专业创作工具</text>
     </view>
 
-    <!-- 主界面：显示功能卡片 -->
+    <!-- 主界面：显示功能栏 -->
     <view class="main-view" wx:if="{{!showCreateView && !showImageView && !showSmileView && !showEnhanceView && !showMotivationalView && !showPetTalkView && !showDaVinciView && !isGenerating}}">
-      <!-- 卡片1：开口笑（大卡片） -->
-      <view class="card card-create" bindtap="enterSmile">
-        <view class="card-icon">😊</view>
-        <view class="card-content">
-          <view class="card-title">开口笑</view>
-          <view class="card-desc">上传照片，让TA开口笑</view>
+      <!-- 单列功能列表 -->
+      <view class="function-list-single">
+        <!-- 功能3：开口笑 -->
+        <view class="function-item-single function-item-video" bindtap="enterSmile">
+          <video
+            wx:if="{{smileBackgroundVideoUrl}}"
+            class="function-background-video"
+            src="{{smileBackgroundVideoUrl}}"
+            autoplay
+            loop
+            muted
+            show-center-play-btn="{{false}}"
+            show-play-btn="{{false}}"
+            show-fullscreen-btn="{{false}}"
+            controls="{{false}}"
+            objectFit="cover"
+          ></video>
+          <image
+            wx:else
+            class="function-background-image"
+            src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&q=90"
+            mode="aspectFill"
+          ></image>
+          <view class="function-overlay"></view>
+          <view class="function-content">
+            <view class="function-title">开口笑</view>
+            <view class="function-desc">上传照片，让TA开口笑</view>
+          </view>
+          <view class="function-arrow">→</view>
+        </view>
+
+        <!-- 功能5：励志视频 -->
+        <view class="function-item-single" style="background-image: url('https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=90');" bindtap="enterMotivational">
+          <view class="function-overlay"></view>
+          <view class="function-content">
+            <view class="function-title">励志视频</view>
+            <view class="function-desc">古风+励志台词</view>
+          </view>
+          <view class="function-arrow">→</view>
+        </view>
+
+        <!-- 功能6：宠物开口说话 -->
+        <view class="function-item-single" style="background-image: url('https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=1200&q=90');" bindtap="enterPetTalk">
+          <view class="function-overlay"></view>
+          <view class="function-content">
+            <view class="function-title">宠物开口说话</view>
+            <view class="function-desc">搞笑台词+8秒视频</view>
+          </view>
+          <view class="function-arrow">→</view>
+        </view>
+
+        <!-- 功能7：我是达芬奇 -->
+        <view class="function-item-single" style="background-image: url('https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=1200&q=90');" bindtap="enterDaVinci">
+          <view class="function-overlay"></view>
+          <view class="function-content">
+            <view class="function-title">我是达芬奇</view>
+            <view class="function-desc">风格化+图片/视频</view>
+          </view>
+          <view class="function-arrow">→</view>
         </view>
       </view>
 
-      <!-- 小卡片容器 -->
-      <view class="small-cards-row">
-        <!-- 卡片2：让照片变清晰 -->
-        <view class="card card-small" bindtap="enterEnhance">
-          <view class="card-icon-small">✨</view>
-          <view class="card-small-content">
-            <view class="card-title-small">让照片变清晰</view>
-            <view class="card-desc-small">高清修复+动态效果</view>
+      <!-- 双列功能列表 -->
+      <view class="function-list-double">
+        <!-- 功能1：文字生视频 -->
+        <view class="function-item" style="background-image: url('https://images.unsplash.com/photo-1485846234645-a62644f84728?w=1200&q=90');" bindtap="enterCreate">
+          <view class="function-overlay"></view>
+          <view class="function-content">
+            <view class="function-title">文字生视频</view>
+            <view class="function-desc">输入文字描述，AI生成视频</view>
           </view>
+          <view class="function-arrow">→</view>
         </view>
 
-        <!-- 卡片3：励志视频 -->
-        <view class="card card-small" bindtap="enterMotivational">
-          <view class="card-icon-small">🎬</view>
-          <view class="card-small-content">
-            <view class="card-title-small">励志视频</view>
-            <view class="card-desc-small">古风+励志台词</view>
+        <!-- 功能2：文字生图片 -->
+        <view class="function-item" style="background-image: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1200&q=90');" bindtap="enterImage">
+          <view class="function-overlay"></view>
+          <view class="function-content">
+            <view class="function-title">文字生图片</view>
+            <view class="function-desc">输入文字描述，AI生成图片</view>
           </view>
-        </view>
-
-        <!-- 卡片4：宠物开口说话 -->
-        <view class="card card-small" bindtap="enterPetTalk">
-          <view class="card-icon-small">🐱</view>
-          <view class="card-small-content">
-            <view class="card-title-small">宠物开口说话</view>
-            <view class="card-desc-small">搞笑台词+8秒视频</view>
-          </view>
-        </view>
-
-        <!-- 卡片5：我是达芬奇 -->
-        <view class="card card-small" bindtap="enterDaVinci">
-          <view class="card-icon-small">🎨</view>
-          <view class="card-small-content">
-            <view class="card-title-small">我是达芬奇</view>
-            <view class="card-desc-small">风格化+图片/视频</view>
-          </view>
+          <view class="function-arrow">→</view>
         </view>
       </view>
     </view>
@@ -652,6 +689,5 @@
     </view>
   </view>
 </view>
-
 
 

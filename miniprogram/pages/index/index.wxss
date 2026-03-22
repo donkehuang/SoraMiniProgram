@@ -56,115 +56,161 @@
   opacity: 0.9;
 }
 
-/* ========== 主界面：功能卡片 ========== */
+/* ========== 主界面：功能列表 ========== */
 .main-view {
   width: 100%;
-  margin-top: 320rpx;  /* 再往下移 */
+  margin-top: 80rpx;
 }
 
-/* 大卡片：立即进入创作 */
-.card-create {
-  margin: 0 20rpx 32rpx 20rpx;  /* 统一使用 margin，确保对称 */
-  height: 110rpx;  /* 更扁 */
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);  /* 更透明 0.15 */
-  border-radius: 24rpx;
-  padding: 24rpx 32rpx;  /* 调整内边距 */
-  box-shadow: 0 8rpx 20rpx rgba(102, 126, 234, 0.2);
-  backdrop-filter: blur(30rpx);  /* 增强磨砂玻璃效果 */
-  -webkit-backdrop-filter: blur(30rpx);
-  border: 1px solid rgba(255, 255, 255, 0.25);  /* 稍微降低边框不透明度 */
+/* 功能列表容器 */
+.function-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+  padding: 0 0rpx;
+}
+
+/* 单列功能列表 */
+.function-list-single {
   display: flex;
-  flex-direction: row;  /* 改为横向排列 */
+  flex-direction: column;
+  gap: 16rpx;
+  padding: 0 0rpx;
+  margin-bottom: 24rpx;
+}
+
+/* 双列功能列表 */
+.function-list-double {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+  padding: 0 0rpx;
+  grid-template-rows: auto auto;
+}
+
+/* 单列功能项 */
+.function-item-single {
+  background-size: cover;
+  background-position: center;
+  border-radius: 20rpx;
+  padding: 32rpx 28rpx;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
+  transition: all 0.3s;
+  border: 2rpx solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.2);
   position: relative;
   overflow: hidden;
-  transition: all 0.3s;
+  height: 160rpx;
+  width: calc(100% - 32rpx);
 }
 
-.card-create:active {
+/* 视频背景功能项 */
+.function-item-video {
+  background: none;
+}
+
+.function-item-video .function-background-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+
+.function-item-video .function-background-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+/* 功能项 */
+.function-item {
+  background-size: cover;
+  background-position: center;
+  border-radius: 20rpx;
+  padding: 32rpx 28rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transition: all 0.3s;
+  border: 2rpx solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+  height: 180rpx;
+  width: 100%;
+}
+
+/* 遮罩层 */
+.function-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%);
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  z-index: 0;
+}
+
+.function-item:active {
   transform: scale(0.98);
 }
 
-.card-create .card-icon {
-  font-size: 48rpx;  /* 图标稍小 */
-  margin-right: 20rpx;  /* 右边距，与文字分开 */
-  flex-shrink: 0;  /* 不收缩 */
+.function-item:active .function-overlay {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%);
 }
 
-.card-create .card-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  flex: 1;
-}
-
-.card-create .card-title {
-  font-size: 30rpx;  /* 字号稍小 */
-  font-weight: bold;
-  color: white;
-  margin-bottom: 2rpx;  /* 减少间距 */
-  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.3);
-}
-
-.card-create .card-desc {
-  font-size: 20rpx;  /* 字号更小 */
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.2);
-}
-
-/* 小卡片容器 */
-.small-cards-row {
-  display: flex;
-  justify-content: space-between;  /* 两端对齐 */
-  gap: 16rpx;  /* 卡片之间的间距 */
-  margin: 0 20rpx;  /* 左右边距与大卡片对齐 */
-}
-
-/* 小卡片 */
-.card-small {
-  flex: 1;  /* 平分宽度，自动填满 */
-  height: 100rpx;  /* 扁平高度 */
-  background: rgba(255, 255, 255, 0.15);  /* 更透明 0.15 */
-  border-radius: 20rpx;
-  padding: 20rpx 24rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(30rpx);  /* 增强磨砂玻璃效果 */
-  -webkit-backdrop-filter: blur(30rpx);
-  border: 1px solid rgba(255, 255, 255, 0.25);  /* 稍微降低边框不透明度 */
-  display: flex;
-  flex-direction: row;  /* 横向布局 */
-  align-items: center;  /* 垂直居中 */
-  transition: all 0.3s;
-}
-
-.card-small:active {
-  transform: scale(0.95);
-}
-
-.card-small .card-icon-small {
-  font-size: 44rpx;
-  margin-right: 12rpx;  /* 图标右边距 */
+.function-icon {
+  font-size: 72rpx;
+  margin-bottom: 16rpx;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
-.card-small .card-small-content {
+.function-content {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  flex: 1;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  text-align: center;
 }
 
-.card-small .card-title-small {
+.function-title {
   font-size: 26rpx;
   font-weight: bold;
-  color: white;  /* 改为白色 */
-  margin-bottom: 2rpx;
-  text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.2);
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.5);
+  margin-bottom: 8rpx;
 }
 
-.card-small .card-desc-small {
+.function-desc {
   font-size: 20rpx;
-  color: rgba(255, 255, 255, 0.7);  /* 改为白色半透明 */
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.5);
+}
+
+.function-arrow {
+  font-size: 40rpx;
+  color: rgba(255, 255, 255, 0.8);
+  margin-left: 16rpx;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
+  display: none;
 }
 
 /* ========== 生图界面 ========== */
