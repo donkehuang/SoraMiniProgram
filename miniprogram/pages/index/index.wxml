@@ -29,13 +29,13 @@
     </view>
 
     <!-- 主界面：显示功能卡片 -->
-    <view class="main-view" wx:if="{{!showCreateView && !showImageView && !isGenerating}}">
-      <!-- 卡片1：立即进入创作（大卡片） -->
-      <view class="card card-create" bindtap="enterCreate">
-        <view class="card-icon">🎬</view>
+    <view class="main-view" wx:if="{{!showCreateView && !showImageView && !showSmileView && !isGenerating}}">
+      <!-- 卡片1：开口笑（大卡片） -->
+      <view class="card card-create" bindtap="enterSmile">
+        <view class="card-icon">😊</view>
         <view class="card-content">
-          <view class="card-title">立即进入创作</view>
-          <view class="card-desc">输入提示词，生成专业视频</view>
+          <view class="card-title">开口笑</view>
+          <view class="card-desc">上传照片，让TA开口笑</view>
         </view>
       </view>
 
@@ -50,7 +50,7 @@
           </view>
         </view>
 
-        <!-- 卡片3：修改提示词 -->
+        <!-- 卡片3：提示词优化 -->
         <view class="card card-small" bindtap="enterPromptEdit">
           <view class="card-icon-small">✏️</view>
           <view class="card-small-content">
@@ -104,6 +104,54 @@
       <button class="generate-btn" bindtap="generateImage">
         生成图片
       </button>
+    </view>
+
+    <!-- 开口笑界面 -->
+    <view class="smile-view" wx:if="{{showSmileView && !isGenerating}}">
+      <!-- 返回按钮 -->
+      <view class="back-btn" bindtap="backToMain">
+        <text class="back-icon">←</text>
+        <text class="back-text">返回</text>
+      </view>
+
+      <!-- 图片选择区域 -->
+      <view class="upload-section">
+        <view class="upload-label">
+          <text class="label-icon">📷</text>
+          <text class="label-text">选择照片</text>
+        </view>
+
+        <!-- 图片预览 -->
+        <view class="image-preview-container" bindtap="chooseSmileImage">
+          <image
+            wx:if="{{smileImageUrl}}"
+            class="smile-preview"
+            src="{{smileImageUrl}}"
+            mode="aspectFit"
+          />
+          <view wx:else class="upload-placeholder">
+            <text class="upload-icon">📸</text>
+            <text class="upload-text">点击选择照片</text>
+          </view>
+        </view>
+
+        <!-- 输出选项 -->
+        <view class="output-options">
+          <view class="option-item" bindtap="onOutputTypeChange" data-type="image">
+            <view class="option-radio {{smileOutputType === 'image' ? 'active' : ''}}"></view>
+            <text class="option-text">生成开口笑图片</text>
+          </view>
+          <view class="option-item" bindtap="onOutputTypeChange" data-type="video">
+            <view class="option-radio {{smileOutputType === 'video' ? 'active' : ''}}"></view>
+            <text class="option-text">生成开口笑视频（4秒）</text>
+          </view>
+        </view>
+
+        <!-- 生成按钮 -->
+        <button class="generate-btn" bindtap="generateSmile" disabled="{{!smileImageUrl}}">
+          {{smileOutputType === 'image' ? '生成开口笑图片' : '生成开口笑视频'}}
+        </button>
+      </view>
     </view>
 
     <!-- 创作界面：显示输入表单 -->

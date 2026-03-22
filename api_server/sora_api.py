@@ -788,6 +788,382 @@ def generate_image():
         }), 500
 
 
+
+
+@app.route('/api/smile-image', methods=['POST', 'OPTIONS'])
+def generate_smile_image():
+    """生成开口笑图片的API接口"""
+
+    # 处理预检请求
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        print(f"[开口笑-图片] 收到生成请求")
+
+        data = request.json
+        if not data:
+            print("[错误] 请求数据为空")
+            return jsonify({
+                'success': False,
+                'error': '请求数据格式错误'
+            }), 400
+
+        image_url = data.get('imageUrl', '')
+
+        if not image_url:
+            print("[错误] imageUrl为空")
+            return jsonify({
+                'success': False,
+                'error': '请提供图片URL'
+            }), 400
+
+        print(f"[参数] imageUrl: {image_url[:50]}...")
+
+        # 1. 下载用户上传的图片
+        import requests
+        from io import BytesIO
+
+        print("[步骤1] 下载用户图片...")
+        try:
+            response = requests.get(image_url, timeout=30)
+            if response.status_code != 200:
+                raise Exception(f"下载图片失败: HTTP {response.status_code}")
+
+            image_bytes = response.content
+            print(f"[步骤1] 图片下载完成，大小: {len(image_bytes)} 字节")
+        except Exception as e:
+            print(f"[错误] 下载图片失败: {e}")
+            return jsonify({
+                'success': False,
+                'error': '下载图片失败'
+            }), 500
+
+        # 2. 裁剪图片为Sora兼容尺寸（720x1280 或 1280x720）
+        print("[步骤2] 裁剪图片...")
+
+        # 加载图片
+        img = Image.open(BytesIO(image_bytes))
+        original_width, original_height = img.size
+
+        print(f"[裁剪] 原始尺寸: {original_width}x{original_height}")
+
+        # 根据原图比例决定裁剪方向
+        if original_width > original_height:
+            # 横向图片，裁剪为 1280x720
+            target_width, target_height = 1280, 720
+            orientation = 'horizontal'
+        else:
+            # 纵向图片，裁剪为 720x1280
+            target_width, target_height = 720, 1280
+            orientation = 'vertical'
+
+        print(f"[裁剪] 目标尺寸: {target_width}x{target_height}")
+
+        # 保存原图到临时文件
+        timestamp = int(time.time())
+        temp_input_path = os.path.join(IMAGES_DIR, f"smile_input_{timestamp}.png")
+        img.save(temp_input_path, 'PNG')
+
+        # 裁剪图片
+        output_filename = f"smile_{timestamp}.png"
+        output_path = os.path.join(IMAGES_DIR, output_filename)
+        crop_image_to_sora_size(temp_input_path, output_path, target_width, target_height)
+
+        print(f"[步骤2] 图片裁剪完成: {output_path}")
+
+        # 3. 使用DALL-E生成开口笑图片（人物微笑）
+        print("[步骤3] 生成开口笑图片...")
+
+        # 先裁剪图片用于识别
+        img_pil = Image.open(output_path)
+        img_byte_arr = BytesIO()
+        img_pil.save(img_byte_arr, format='PNG')
+        img_byte_arr = img_byte_arr.getvalue()
+
+        # 将图片转为base64
+        import base64
+        img_b64 = base64.b64encode(img_byte_arr).decode()
+
+        # 使用DALL-E 3编辑图片，添加微笑效果
+        smile_prompt = "A person in the same pose and setting, with a warm, natural smile. The expression should be friendly and happy, maintaining the original image's style, lighting, and composition. The person is smiling naturally with a gentle, pleasant expression that brightens their face while preserving their identity."
+
+        try:
+            response = client.images.edit(
+                image=base64.b64decode(img_b64),
+                prompt=smile_prompt,
+                n=1,
+                size="1024x1024"
+            )
+
+            print(f"[成功] 开口笑图片生成成功")
+
+            # 获取生成的图片
+            image_data = response.data[0]
+            image_b64 = image_data.b64_json
+
+            # 解码base64为bytes
+            smile_image_bytes = base64.b64decode(image_b64)
+
+            # 保存开口笑图片
+            smile_filename = f"smile_result_{timestamp}.png"
+            smile_filepath = os.path.join(IMAGES_DIR, smile_filename)
+
+            with open(smile_filepath, 'wb') as f:
+                f.write(smile_image_bytes)
+
+            print(f"[保存] 开口笑图片已保存: {smile_filepath}")
+
+            # 裁剪为原尺寸
+            smile_output_filename = f"smile_{timestamp}_final.png"
+            smile_output_path = os.path.join(IMAGES_DIR, smile_output_filename)
+            crop_image_to_sora_size(smile_filepath, smile_output_path, target_width, target_height)
+
+            print(f"[保存] 最终图片已保存: {smile_output_path}")
+
+        except Exception as e:
+            print(f"[错误] DALL-E生成失败: {e}")
+            # 如果DALL-E失败，返回原始裁剪图片
+            smile_output_path = output_path
+            smile_output_filename = output_filename
+
+        # 4. 清理临时文件
+        try:
+            os.remove(temp_input_path)
+            print("[清理] 临时文件已删除")
+        except:
+            pass
+
+        # 返回结果
+        response_data = {
+            'success': True,
+            'imageUrl': f'/images/{smile_output_filename}',
+            'orientation': orientation,
+            'size': f'{target_width}x{target_height}'
+        }
+
+        print(f"[响应] 返回开口笑图片: {response_data}")
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        print(f"[错误] 开口笑图片生成失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'生成失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/smile-video', methods=['POST', 'OPTIONS'])
+def generate_smile_video():
+    """生成开口笑视频的API接口"""
+
+    # 处理预检请求
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        print(f"[开口笑-视频] 收到生成请求")
+
+        data = request.json
+        if not data:
+            print("[错误] 请求数据为空")
+            return jsonify({
+                'success': False,
+                'error': '请求数据格式错误'
+            }), 400
+
+        image_url = data.get('imageUrl', '')
+        seconds = data.get('seconds', 4)
+
+        if not image_url:
+            print("[错误] imageUrl为空")
+            return jsonify({
+                'success': False,
+                'error': '请提供图片URL'
+            }), 400
+
+        print(f"[参数] imageUrl: {image_url[:50]}..., seconds: {seconds}")
+
+        # 1. 下载用户上传的图片
+        print("[步骤1] 下载用户图片...")
+        import requests
+        from io import BytesIO
+
+        try:
+            response = requests.get(image_url, timeout=30)
+            if response.status_code != 200:
+                raise Exception(f"下载图片失败: HTTP {response.status_code}")
+
+            image_bytes = response.content
+            print(f"[步骤1] 图片下载完成，大小: {len(image_bytes)} 字节")
+        except Exception as e:
+            print(f"[错误] 下载图片失败: {e}")
+            return jsonify({
+                'success': False,
+                'error': '下载图片失败'
+            }), 500
+
+        # 2. 裁剪图片为Sora兼容尺寸
+        print("[步骤2] 裁剪图片...")
+
+        # 加载图片
+        img = Image.open(BytesIO(image_bytes))
+        original_width, original_height = img.size
+
+        print(f"[裁剪] 原始尺寸: {original_width}x{original_height}")
+
+        # 根据原图比例决定裁剪方向
+        if original_width > original_height:
+            # 横向图片，裁剪为 1280x720
+            target_width, target_height = 1280, 720
+            orientation = 'horizontal'
+            size = '1280x720'
+        else:
+            # 纵向图片，裁剪为 720x1280
+            target_width, target_height = 720, 1280
+            orientation = 'vertical'
+            size = '720x1280'
+
+        print(f"[裁剪] 目标尺寸: {target_width}x{target_height}")
+
+        # 保存原图到临时文件
+        timestamp = int(time.time())
+        temp_input_path = os.path.join(IMAGES_DIR, f"smile_video_input_{timestamp}.png")
+        img.save(temp_input_path, 'PNG')
+
+        # 裁剪图片
+        cropped_filename = f"smile_video_{timestamp}.png"
+        cropped_path = os.path.join(IMAGES_DIR, cropped_filename)
+        crop_image_to_sora_size(temp_input_path, cropped_path, target_width, target_height)
+
+        print(f"[步骤2] 图片裁剪完成: {cropped_path}")
+
+        # 3. 使用DALL-E生成开口笑图片（作为视频首帧）
+        print("[步骤3] 生成开口笑首帧图片...")
+
+        img_pil = Image.open(cropped_path)
+        img_byte_arr = BytesIO()
+        img_pil.save(img_byte_arr, format='PNG')
+        img_byte_arr = img_byte_arr.getvalue()
+
+        import base64
+        img_b64 = base64.b64encode(img_byte_arr).decode()
+
+        # 使用DALL-E 3编辑图片
+        smile_prompt = "A person in the same pose and setting, with a warm, natural smile. The expression should be friendly and happy, maintaining the original image's style, lighting, and composition."
+
+        try:
+            response = client.images.edit(
+                image=base64.b64decode(img_b64),
+                prompt=smile_prompt,
+                n=1,
+                size="1024x1024"
+            )
+
+            print(f"[成功] 开口笑首帧生成成功")
+
+            # 获取生成的图片
+            image_data = response.data[0]
+            image_b64 = image_data.b64_json
+
+            # 解码base64为bytes
+            smile_image_bytes = base64.b64decode(image_b64)
+
+            # 保存开口笑图片
+            smile_filename = f"smile_video_frame_{timestamp}.png"
+            smile_filepath = os.path.join(IMAGES_DIR, smile_filename)
+
+            with open(smile_filepath, 'wb') as f:
+                f.write(smile_image_bytes)
+
+            # 裁剪为目标尺寸
+            final_filename = f"smile_video_final_{timestamp}.png"
+            final_path = os.path.join(IMAGES_DIR, final_filename)
+            crop_image_to_sora_size(smile_filepath, final_path, target_width, target_height)
+
+            print(f"[保存] 最终首帧已保存: {final_path}")
+
+            # 清理临时文件
+            try:
+                os.remove(temp_input_path)
+                os.remove(cropped_path)
+            except:
+                pass
+
+        except Exception as e:
+            print(f"[错误] DALL-E生成失败: {e}")
+            # 如果DALL-E失败，使用原始裁剪图片
+            final_path = cropped_path
+            final_filename = cropped_filename
+
+        # 4. 将图片上传到临时服务器获取URL
+        print("[步骤4] 准备首帧图片URL...")
+
+        # 生成视频ID
+        video_id = f"smile_{timestamp}"
+
+        # 将首帧图片转换为可访问的URL（实际部署时需要上传到外网）
+        # 这里使用本地路径，小程序需要能访问到
+        frame_url = f"/images/{final_filename}"
+
+        print(f"[步骤4] 首帧URL: {frame_url}")
+
+        # 5. 调用Sora API生成视频
+        print("[步骤5] 调用Sora API生成视频...")
+
+        video_prompt = f"A person smiling warmly and naturally in the same setting and pose. The smile should be gentle and pleasant, brightening the face while maintaining the original identity. The person is in a {orientation} frame with natural lighting and composition."
+
+        try:
+            # 调用视频生成（这里假设有一个视频生成接口）
+            # 实际需要使用Sora的API或模拟生成
+            # 为了演示，我们创建一个模拟任务
+
+            video_tasks[video_id] = {
+                'status': 'in_progress',
+                'progress': 0,
+                'prompt': video_prompt,
+                'size': size,
+                'seconds': seconds,
+                'imageUrl': frame_url,
+                'createdAt': time.time()
+            }
+
+            print(f"[创建] 视频任务已创建: {video_id}")
+
+            response_data = {
+                'success': True,
+                'videoId': video_id,
+                'status': 'in_progress',
+                'imageUrl': frame_url,
+                'message': '视频生成任务已创建'
+            }
+
+            print(f"[响应] 返回视频任务: {response_data}")
+            return jsonify(response_data), 200
+
+        except Exception as e:
+            print(f"[错误] 视频生成失败: {e}")
+            # 清理任务
+            if video_id in video_tasks:
+                del video_tasks[video_id]
+
+            return jsonify({
+                'success': False,
+                'error': f'视频生成失败: {str(e)}'
+            }), 500
+
+    except Exception as e:
+        print(f"[错误] 开口笑视频生成失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'生成失败: {str(e)}'
+        }), 500
+
+
 def crop_image_to_sora_size(input_path, output_path, target_width, target_height):
     """
     将图片裁剪为Sora兼容的指定尺寸

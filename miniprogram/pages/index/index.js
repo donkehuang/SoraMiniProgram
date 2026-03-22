@@ -17,6 +17,7 @@ Page({
     // 界面状态
     showCreateView: false, // 是否显示创作界面
     showImageView: false,  // 是否显示生图界面
+    showSmileView: false,  // 是否显示开口笑界面
 
     // 生图相关
     imagePrompt: '',
@@ -24,6 +25,10 @@ Page({
     imageOrientationIndex: 0,  // 默认竖屏
     imageUrl: '',  // 生成的图片URL
     optimizePrompt: '',  // 优化图片的提示词
+
+    // 开口笑相关
+    smileImageUrl: '',  // 用户选择的图片
+    smileOutputType: 'video',  // 输出类型：'image' 或 'video'
 
     // 预设prompt风格
     styleOptions: ['无风格'],
@@ -233,11 +238,19 @@ Page({
     })
   },
 
+  enterSmile() {
+    console.log('[卡片] 进入开口笑界面')
+    this.setData({
+      showSmileView: true
+    })
+  },
+
   backToMain() {
     console.log('[返回] 回到主界面')
     this.setData({
       showCreateView: false,
-      showImageView: false
+      showImageView: false,
+      showSmileView: false
     })
   },
 
@@ -1505,5 +1518,285 @@ Page({
         }
       })
     })
+  },
+
+  // ========== 开口笑功能 ==========
+  chooseSmileImage() {
+    const that = this
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      maxDuration: 30,
+      camera: 'back',
+      success(res) {
+        console.log('[开口笑] 选择图片成功:', res.tempFiles[0].tempFilePath)
+
+        // 获取图片信息（尺寸）
+        wx.getImageInfo({
+          src: res.tempFiles[0].tempFilePath,
+          success(imgInfo) {
+            console.log('[开口笑] 图片尺寸:', imgInfo.width, 'x', imgInfo.height)
+
+            that.setData({
+              smileImageUrl: res.tempFiles[0].tempFilePath
+            })
+          },
+          fail(err) {
+            console.error('[开口笑] 获取图片信息失败:', err)
+            wx.showToast({
+              title: '图片加载失败',
+              icon: 'none'
+            })
+          }
+        })
+      },
+      fail(err) {
+        console.error('[开口笑] 选择图片失败:', err)
+        if (err.errMsg && !err.errMsg.includes('cancel')) {
+          wx.showToast({
+            title: '选择图片失败',
+            icon: 'none'
+          })
+        }
+      }
+    })
+  },
+
+  onOutputTypeChange(e) {
+    const type = e.currentTarget.dataset.type
+    console.log('[开口笑] 切换输出类型:', type)
+    this.setData({
+      smileOutputType: type
+    })
+  },
+
+  async generateSmile() {
+    const { smileImageUrl, smileOutputType, apiBaseUrl } = this.data
+
+    if (!smileImageUrl) {
+      wx.showToast({
+        title: '请先选择照片',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 清除之前的错误信息
+    this.setData({
+      errorMessage: '',
+      isGenerating: true,
+      generationProgress: 10,
+      statusText: '准备生成...'
+    })
+
+    try {
+      // 第一步：上传图片到云存储
+      this.setData({
+        generationProgress: 20,
+        statusText: '正在上传图片...'
+      })
+
+      const timestamp = Date.now()
+      const cloudPath = `smile_input/${timestamp}.png`
+
+      // 使用cloudStorage上传
+      const uploadResult = await cloudStorage.uploadFile(smileImageUrl, cloudPath)
+      console.log('[开口笑] 图片上传成功:', uploadResult.fileID)
+
+      // 第二步：调用API生成
+      this.setData({
+        generationProgress: 40,
+        statusText: smileOutputType === 'image' ? '正在生成开口笑图片...' : '正在生成开口笑视频...'
+      })
+
+      const apiUrl = smileOutputType === 'image'
+        ? `${apiBaseUrl}/api/smile-image`
+        : `${apiBaseUrl}/api/smile-video`
+
+      const requestData = {
+        imageUrl: uploadResult.tempFileURL || uploadResult.fileID
+      }
+
+      if (smileOutputType === 'video') {
+        requestData.seconds = 4  // 固定4秒
+      }
+
+      const requestPromise = new Promise((resolve, reject) => {
+        console.log('[开口笑] 请求URL:', apiUrl)
+        console.log('[开口笑] 请求数据:', requestData)
+        wx.request({
+          url: apiUrl,
+          method: 'POST',
+          data: requestData,
+          header: {
+            'content-type': 'application/json'
+          },
+          success: (res) => {
+            console.log('[开口笑] API响应:', res.data)
+            resolve(res)
+          },
+          fail: (err) => {
+            console.error('[开口笑] 请求失败:', err)
+            reject(new Error(`请求失败: ${err.errMsg}`))
+          }
+        })
+      })
+
+      const res = await requestPromise
+
+      if (!res.data || !res.data.success) {
+        throw new Error(res.data?.error || '生成失败')
+      }
+
+      const resultUrl = res.data.imageUrl || res.data.videoUrl
+      console.log('[开口笑] 生成成功:', resultUrl)
+
+      if (smileOutputType === 'image') {
+        // 图片生成：下载、上传、保存
+        this.setData({
+          generationProgress: 60,
+          statusText: '正在下载图片...'
+        })
+
+        const localPath = await this.downloadImageToLocal(resultUrl, apiBaseUrl)
+
+        this.setData({
+          generationProgress: 80,
+          statusText: '正在保存到作品...'
+        })
+
+        const outputCloudPath = `smile_images/${timestamp}.png`
+        const outputUploadResult = await cloudStorage.uploadFile(localPath, outputCloudPath)
+
+        await this.saveSmileResultToDatabase(outputUploadResult, timestamp, 'image')
+
+        this.setData({
+          isGenerating: false,
+          imageUrl: outputUploadResult.tempFileURL || outputUploadResult.fileID,
+          generationProgress: 100,
+          statusText: '生成完成！'
+        })
+
+        wx.showToast({
+          title: '已保存到作品',
+          icon: 'success'
+        })
+      } else {
+        // 视频生成：等待、下载、上传、保存
+        this.setData({
+          generationProgress: 60,
+          statusText: '等待视频生成...'
+        })
+
+        const videoId = res.data.videoId || 'smile_' + timestamp
+
+        // 等待视频就绪
+        await this.waitForVideoReady(videoId, apiBaseUrl)
+
+        this.setData({
+          generationProgress: 70,
+          statusText: '正在下载视频...'
+        })
+
+        const localPath = await this.downloadVideoWithRetry(videoId, apiBaseUrl, 3)
+
+        this.setData({
+          generationProgress: 85,
+          statusText: '正在上传到云存储...'
+        })
+
+        const outputCloudPath = `smile_videos/${timestamp}.mp4`
+        const outputUploadResult = await cloudStorage.uploadFile(localPath, outputCloudPath)
+
+        this.setData({
+          generationProgress: 95,
+          statusText: '正在保存到作品...'
+        })
+
+        await this.saveSmileResultToDatabase(outputUploadResult, timestamp, 'video', videoId)
+
+        this.setData({
+          isGenerating: false,
+          videoUrl: outputUploadResult.tempFileURL || outputUploadResult.fileID,
+          generationProgress: 100,
+          statusText: '生成完成！'
+        })
+
+        wx.showToast({
+          title: '已保存到作品',
+          icon: 'success'
+        })
+
+        // 延迟返回主界面
+        setTimeout(() => {
+          this.setData({
+            showSmileView: false,
+            smileImageUrl: ''
+          })
+        }, 2000)
+      }
+
+    } catch (error) {
+      console.error('[开口笑] 生成失败:', error)
+      this.setData({
+        errorMessage: error.message || '生成失败',
+        isGenerating: false,
+        generationProgress: 0
+      })
+
+      wx.showToast({
+        title: error.message || '生成失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  async saveSmileResultToDatabase(uploadResult, timestamp, type, videoId = null) {
+    try {
+      const db = wx.cloud.database()
+
+      const userInfo = wx.getStorageSync('userInfo')
+      if (!userInfo || !userInfo.nickName) {
+        throw new Error('用户未登录')
+      }
+
+      const date = new Date(timestamp)
+      const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+
+      const data = {
+        type: type === 'image' ? 'smile-image' : 'smile-video',
+        inputImage: this.data.smileImageUrl,
+        outputFileID: uploadResult.fileID,
+        outputURL: uploadResult.tempFileURL || uploadResult.fileID,
+        outputType: type,
+        createTime: db.serverDate(),
+        date: dateStr,
+        timestamp: timestamp,
+        userInfo: {
+          nickName: userInfo.nickName,
+          avatarUrl: userInfo.avatarUrl
+        },
+        viewCount: 0,
+        likeCount: 0
+      }
+
+      if (videoId) {
+        data.videoId = videoId
+      }
+
+      console.log('[开口笑] 保存数据:', data)
+
+      const collectionName = type === 'image' ? 'images' : 'videos'
+      await db.collection(collectionName).add({
+        data: data
+      })
+
+      console.log('[开口笑] 保存成功')
+
+    } catch (error) {
+      console.error('[开口笑] 保存失败:', error)
+      throw error
+    }
   }
 })
