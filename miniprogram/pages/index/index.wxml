@@ -29,7 +29,7 @@
     </view>
 
     <!-- 主界面：显示功能卡片 -->
-    <view class="main-view" wx:if="{{!showCreateView && !showImageView && !showSmileView && !isGenerating}}">
+    <view class="main-view" wx:if="{{!showCreateView && !showImageView && !showSmileView && !showEnhanceView && !showMotivationalView && !showPetTalkView && !showDaVinciView && !isGenerating}}">
       <!-- 卡片1：开口笑（大卡片） -->
       <view class="card card-create" bindtap="enterSmile">
         <view class="card-icon">😊</view>
@@ -50,12 +50,30 @@
           </view>
         </view>
 
-        <!-- 卡片3：提示词优化 -->
-        <view class="card card-small" bindtap="enterPromptEdit">
-          <view class="card-icon-small">✏️</view>
+        <!-- 卡片3：励志视频 -->
+        <view class="card card-small" bindtap="enterMotivational">
+          <view class="card-icon-small">🎬</view>
           <view class="card-small-content">
-            <view class="card-title-small">提示词优化</view>
-            <view class="card-desc-small">即将上线</view>
+            <view class="card-title-small">励志视频</view>
+            <view class="card-desc-small">古风+励志台词</view>
+          </view>
+        </view>
+
+        <!-- 卡片4：宠物开口说话 -->
+        <view class="card card-small" bindtap="enterPetTalk">
+          <view class="card-icon-small">🐱</view>
+          <view class="card-small-content">
+            <view class="card-title-small">宠物开口说话</view>
+            <view class="card-desc-small">搞笑台词+8秒视频</view>
+          </view>
+        </view>
+
+        <!-- 卡片5：我是达芬奇 -->
+        <view class="card card-small" bindtap="enterDaVinci">
+          <view class="card-icon-small">🎨</view>
+          <view class="card-small-content">
+            <view class="card-title-small">我是达芬奇</view>
+            <view class="card-desc-small">风格化+图片/视频</view>
           </view>
         </view>
       </view>
@@ -211,6 +229,265 @@
           {{smileOutputType === 'image' ? '生成开口笑图片' : '生成开口笑视频'}}
         </button>
       </view>
+    </view>
+
+    <!-- 励志视频界面 -->
+    <view class="motivational-view" wx:if="{{showMotivationalView && !isGenerating}}">
+      <!-- 返回按钮 -->
+      <view class="back-btn" bindtap="backToMain">
+        <text class="back-icon">←</text>
+        <text class="back-text">返回</text>
+      </view>
+
+      <!-- 输入方式选择 -->
+      <view class="input-section">
+        <view class="input-label">
+          <text class="label-icon">💬</text>
+          <text class="label-text">输入励志内容</text>
+        </view>
+
+        <!-- 输入方式切换 -->
+        <view class="input-mode-tabs">
+          <view class="tab {{inputMode === 'text' ? 'active' : ''}}" bindtap="onInputModeChange" data-mode="text">
+            <text>打字输入</text>
+          </view>
+          <view class="tab {{inputMode === 'voice' ? 'active' : ''}}" bindtap="onInputModeChange" data-mode="voice">
+            <text>语音输入</text>
+          </view>
+        </view>
+
+        <!-- 打字输入 -->
+        <view wx:if="{{inputMode === 'text'}}">
+          <textarea
+            class="prompt-input"
+            placeholder="请输入一段励志内容，例如：坚持不懈，终将成功..."
+            value="{{motivationalText}}"
+            bindinput="onMotivationalTextInput"
+            maxlength="200"
+            auto-height
+          />
+          <text class="char-count">{{motivationalText.length}}/200</text>
+        </view>
+
+        <!-- 语音输入 -->
+        <view wx:else class="voice-input-area">
+          <button class="voice-btn" bindtouchstart="startRecording" bindtouchend="stopRecording">
+            <text class="voice-icon">🎤</text>
+            <text class="voice-text">{{isRecording ? '录音中...' : '按住说话'}}</text>
+          </button>
+          <text class="voice-hint">按住按钮说话，松开结束</text>
+        </view>
+
+        <!-- 视频风格选择 -->
+        <view class="style-selector">
+          <view class="style-header">
+            <text class="style-title">选择视频风格</text>
+          </view>
+          <view class="style-grid">
+            <view class="style-item {{motivationalStyle === 'landscape' ? 'active' : ''}}" bindtap="onStyleChange" data-style="landscape">
+              <view class="style-icon">🏔️</view>
+              <text class="style-name">自然景观</text>
+            </view>
+            <view class="style-item {{motivationalStyle === 'tea' ? 'active' : ''}}" bindtap="onStyleChange" data-style="tea">
+              <view class="style-icon">🍵</view>
+              <text class="style-name">采茶古风</text>
+            </view>
+            <view class="style-item {{motivationalStyle === 'garden' ? 'active' : ''}}" bindtap="onStyleChange" data-style="garden">
+              <view class="style-icon">🏮</view>
+              <text class="style-name">庭院古风</text>
+            </view>
+            <view class="style-item {{motivationalStyle === 'bamboo' ? 'active' : ''}}" bindtap="onStyleChange" data-style="bamboo">
+              <view class="style-icon">🎋</view>
+              <text class="style-name">竹林古韵</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 生成按钮 -->
+      <button class="generate-btn" bindtap="generateMotivationalVideo" disabled="{{!motivationalText}}">
+        生成励志视频
+      </button>
+    </view>
+
+    <!-- 宠物开口说话界面 -->
+    <view class="pet-talk-view" wx:if="{{showPetTalkView && !isGenerating}}">
+      <!-- 返回按钮 -->
+      <view class="back-btn" bindtap="backToMain">
+        <text class="back-icon">←</text>
+        <text class="back-text">返回</text>
+      </view>
+
+      <!-- 图片选择区域 -->
+      <view class="upload-section">
+        <view class="upload-label">
+          <text class="label-icon">📷</text>
+          <text class="label-text">上传宠物照片</text>
+        </view>
+
+        <!-- 图片预览 -->
+        <view class="image-preview-container" bindtap="choosePetImage">
+          <image
+            wx:if="{{petImageUrl}}"
+            class="pet-preview"
+            src="{{petImageUrl}}"
+            mode="aspectFit"
+          />
+          <view wx:else class="upload-placeholder">
+            <text class="upload-icon">📸</text>
+            <text class="upload-text">点击选择宠物照片</text>
+          </view>
+        </view>
+
+        <!-- 台词输入 -->
+        <view class="dialogue-section">
+          <view class="dialogue-label">
+            <text class="dialogue-icon">💬</text>
+            <text class="dialogue-title">想让宠物说的话</text>
+          </view>
+          <textarea
+            class="dialogue-input"
+            placeholder="不输入将随机生成搞笑台词"
+            value="{{petDialogue}}"
+            bindinput="onPetDialogueInput"
+            maxlength="100"
+            auto-height
+          />
+          <text class="char-count">{{petDialogue.length}}/100</text>
+
+          <!-- 随机台词按钮 -->
+          <button class="random-dialogue-btn" bindtap="generateRandomDialogue">
+            <text class="random-icon">🎲</text>
+            <text>随机生成搞笑台词</text>
+          </button>
+        </view>
+      </view>
+
+      <!-- 生成按钮 -->
+      <button class="generate-btn" bindtap="generatePetTalkVideo" disabled="{{!petImageUrl}}">
+        生成宠物说话视频
+      </button>
+    </view>
+
+    <!-- 我是达芬奇界面 -->
+    <view class="davinci-view" wx:if="{{showDaVinciView && !isGenerating}}">
+      <!-- 返回按钮 -->
+      <view class="back-btn" bindtap="backToMain">
+        <text class="back-icon">←</text>
+        <text class="back-text">返回</text>
+      </view>
+
+      <!-- 绘画风格选择 -->
+      <view class="upload-section">
+        <view class="upload-label">
+          <text class="label-icon">🎨</text>
+          <text class="label-text">选择绘画风格</text>
+        </view>
+
+        <!-- 风格选择网格 -->
+        <view class="davinci-style-grid">
+          <view class="davinci-style-item {{davinciStyle === 'oil' ? 'active' : ''}}" bindtap="onDavinciStyleChange" data-style="oil">
+            <view class="davinci-style-icon">🖼️</view>
+            <text class="davinci-style-name">油画</text>
+            <text class="davinci-style-desc">经典油画质感</text>
+          </view>
+          <view class="davinci-style-item {{davinciStyle === 'pencil' ? 'active' : ''}}" bindtap="onDavinciStyleChange" data-style="pencil">
+            <view class="davinci-style-icon">✏️</view>
+            <text class="davinci-style-name">铅笔画</text>
+            <text class="davinci-style-desc">精致素描风格</text>
+          </view>
+          <view class="davinci-style-item {{davinciStyle === 'ink' ? 'active' : ''}}" bindtap="onDavinciStyleChange" data-style="ink">
+            <view class="davinci-style-icon">🌊</view>
+            <text class="davinci-style-name">水墨画</text>
+            <text class="davinci-style-desc">东方水墨韵味</text>
+          </view>
+        </view>
+
+        <!-- 图片上传 -->
+        <view class="davinci-upload-section">
+          <view class="upload-label">
+            <text class="label-icon">📷</text>
+            <text class="label-text">上传图片（可选）</text>
+          </view>
+
+          <view class="image-preview-container" bindtap="chooseDaVinciImage">
+            <image
+              wx:if="{{davinciImageUrl}}"
+              class="davinci-preview"
+              src="{{davinciImageUrl}}"
+              mode="aspectFit"
+            />
+            <view wx:else class="upload-placeholder">
+              <text class="upload-icon">📸</text>
+              <text class="upload-text">点击上传参考图片</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 文字描述输入 -->
+        <view class="input-section">
+          <view class="input-label">
+            <text class="label-icon">✍️</text>
+            <text class="label-text">描述内容</text>
+          </view>
+          <textarea
+            class="prompt-input"
+            placeholder="描述您想要生成的画面，例如：一位古典美人手持折扇..."
+            value="{{davinciText}}"
+            bindinput="onDavinciTextInput"
+            maxlength="500"
+            auto-height
+          />
+          <text class="char-count">{{davinciText.length}}/500</text>
+        </view>
+
+        <!-- 输出类型选择 -->
+        <view class="davinci-output-section">
+          <view class="output-label">
+            <text class="label-icon">🎬</text>
+            <text class="label-text">选择输出类型</text>
+          </view>
+
+          <view class="davinci-output-options">
+            <view class="option-item" bindtap="onDavinciOutputTypeChange" data-type="image">
+              <view class="option-radio {{davinciOutputType === 'image' ? 'active' : ''}}"></view>
+              <view class="option-content">
+                <text class="option-text">生成图片</text>
+                <text class="option-desc">生成一张风格化图片</text>
+              </view>
+            </view>
+            <view class="option-item" bindtap="onDavinciOutputTypeChange" data-type="video">
+              <view class="option-radio {{davinciOutputType === 'video' ? 'active' : ''}}"></view>
+              <view class="option-content">
+                <text class="option-text">生成视频（8秒）</text>
+                <text class="option-desc">生成8秒动态视频</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 优化子风格选择（当选择了某个主风格时显示） -->
+        <view class="davinci-substyle-section" wx:if="{{davinciStyle}}">
+          <view class="substyle-label">
+            <text class="label-icon">⭐</text>
+            <text class="label-text">选择优化风格</text>
+          </view>
+
+          <view class="substyle-grid">
+            <view wx:for="{{davinciSubStyles}}" wx:key="id" class="substyle-item" bindtap="onDavinciSubStyleChange" data-substyle="{{item.id}}">
+              <view class="substyle-preview {{selectedDavinciSubStyle === item.id ? 'active' : ''}}">
+                <text class="substyle-name">{{item.name}}</text>
+              </view>
+              <view class="substyle-desc">{{item.description}}</view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 生成按钮 -->
+      <button class="generate-btn" bindtap="generateDaVinciWork" disabled="{{!davinciText}}">
+        {{davinciOutputType === 'image' ? '生成画作' : '生成视频'}}
+      </button>
     </view>
 
     <!-- 创作界面：显示输入表单 -->

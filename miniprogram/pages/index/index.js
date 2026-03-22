@@ -19,6 +19,9 @@ Page({
     showImageView: false,  // 是否显示生图界面
     showSmileView: false,  // 是否显示开口笑界面
     showEnhanceView: false, // 是否显示让照片变清晰界面
+    showMotivationalView: false, // 是否显示励志视频界面
+    showPetTalkView: false, // 是否显示宠物开口说话界面
+    showDaVinciView: false, // 是否显示我是达芬奇界面
 
     // 生图相关
     imagePrompt: '',
@@ -34,6 +37,49 @@ Page({
     // 让照片变清晰相关
     enhanceImageUrl: '',  // 用户选择的图片
     enhanceType: 'upscale',  // 功能类型：'upscale'（提高分辨率）或 'animate'（让照片动起来）
+
+    // 励志视频相关
+    inputMode: 'text',  // 输入模式：'text' 或 'voice'
+    motivationalText: '',  // 励志内容文本
+    motivationalStyle: 'landscape',  // 视频风格：'landscape', 'tea', 'garden', 'bamboo'
+    isRecording: false,  // 是否正在录音
+    recorderManager: null,  // 录音管理器
+
+    // 宠物开口说话相关
+    petImageUrl: '',  // 宠物图片
+    petDialogue: '',  // 宠物台词
+
+    // 我是达芬奇相关
+    davinciStyle: '',  // 主风格：'oil', 'pencil', 'ink'
+    davinciImageUrl: '',  // 用户上传的参考图片
+    davinciText: '',  // 描述文字
+    davinciOutputType: 'image',  // 输出类型：'image' 或 'video'
+    selectedDavinciSubStyle: '',  // 选中的子风格
+    davinciSubStyles: [],  // 子风格列表
+
+    // 随机搞笑台词库
+    funnyDialogues: [
+      "铲屎的，今天的罐头呢？",
+      "你今天加班了？我不接受这个解释",
+      "猫粮品牌换了？你死定了",
+      "再摸我尾巴试试",
+      "这就是你花几千块买的猫窝？我更喜欢快递箱",
+      "你又偷偷吃了我的零食",
+      "现在是凌晨3点，该醒醒铲屎了",
+      "我决定了，明天开始减肥...大概",
+      "你看我眼里的意思是'我想吃'不是'真可爱'",
+      "那只鸟又在挑衅我，我要出去了",
+      "你的键盘为什么这么暖和？",
+      "今天的阳光很舒服，让我再睡5小时",
+      "你回来了？先把罐头放下再说话",
+      "我刚刚梦见你给我开了10个罐头",
+      "为什么那只猫可以有猫爬架？",
+      "你今天又去哪浪了？",
+      "新买的逗猫棒在哪？快点拿出来",
+      "我允许你摸我3秒钟...好了时间到",
+      "我的水又没换？你等着",
+      "今天的阳光很好，适合在窗台发呆"
+    ]
 
     // 预设prompt风格
     styleOptions: ['无风格'],
@@ -87,12 +133,15 @@ Page({
 
   onLoad() {
     console.log('[页面加载] 首页加载完成')
-    
+
     // 初始化风格选项（根据默认时长）
     this.updateStyleOptions()
 
     // 动态获取背景视频URL
     this.loadBackgroundVideo()
+
+    // 初始化录音管理器
+    this.initRecorder()
   },
 
   // 动态加载背景视频URL
@@ -257,13 +306,37 @@ Page({
     })
   },
 
+  enterMotivational() {
+    console.log('[卡片] 进入励志视频界面')
+    this.setData({
+      showMotivationalView: true
+    })
+  },
+
+  enterPetTalk() {
+    console.log('[卡片] 进入宠物开口说话界面')
+    this.setData({
+      showPetTalkView: true
+    })
+  },
+
+  enterDaVinci() {
+    console.log('[卡片] 进入我是达芬奇界面')
+    this.setData({
+      showDaVinciView: true
+    })
+  },
+
   backToMain() {
     console.log('[返回] 回到主界面')
     this.setData({
       showCreateView: false,
       showImageView: false,
       showSmileView: false,
-      showEnhanceView: false
+      showEnhanceView: false,
+      showMotivationalView: false,
+      showPetTalkView: false,
+      showDaVinciView: false
     })
   },
 
@@ -2085,6 +2158,1354 @@ Page({
 
     } catch (error) {
       console.error('[让照片变清晰] 保存失败:', error)
+      throw error
+    }
+  },
+
+  // ========== 励志视频功能 ==========
+
+  // 初始化录音管理器
+  initRecorder() {
+    const recorderManager = wx.getRecorderManager()
+    this.setData({ recorderManager })
+
+    // 录音开始
+    recorderManager.onStart(() => {
+      console.log('[录音] 开始录音')
+      this.setData({ isRecording: true })
+    })
+
+    // 录音停止
+    recorderManager.onStop((res) => {
+      console.log('[录音] 停止录音', res)
+      const { tempFilePath, duration } = res
+
+      // 识别语音内容
+      this.recognizeVoice(tempFilePath)
+    })
+
+    // 录音错误
+    recorderManager.onError((err) => {
+      console.error('[录音] 录音失败:', err)
+      wx.showToast({
+        title: '录音失败',
+        icon: 'none'
+      })
+      this.setData({ isRecording: false })
+    })
+  },
+
+  // 切换输入模式
+  onInputModeChange(e) {
+    const mode = e.currentTarget.dataset.mode
+    console.log('[励志视频] 切换输入模式:', mode)
+    this.setData({
+      inputMode: mode
+    })
+  },
+
+  // 励志文本输入
+  onMotivationalTextInput(e) {
+    this.setData({
+      motivationalText: e.detail.value
+    })
+  },
+
+  // 切换视频风格
+  onStyleChange(e) {
+    const style = e.currentTarget.dataset.style
+    console.log('[励志视频] 切换风格:', style)
+    this.setData({
+      motivationalStyle: style
+    })
+  },
+
+  // 开始录音
+  startRecording() {
+    if (!this.data.recorderManager) {
+      wx.showToast({
+        title: '录音管理器未初始化',
+        icon: 'none'
+      })
+      return
+    }
+
+    console.log('[录音] 开始录音')
+    const options = {
+      duration: 10000,  // 最长10秒
+      format: 'mp3',
+      sampleRate: 16000,
+      numberOfChannels: 1,
+      encodeBitRate: 48000
+    }
+
+    this.data.recorderManager.start(options)
+  },
+
+  // 停止录音
+  stopRecording() {
+    if (this.data.recorderManager) {
+      console.log('[录音] 停止录音')
+      this.data.recorderManager.stop()
+    }
+  },
+
+  // 识别语音内容
+  async recognizeVoice(audioPath) {
+    console.log('[语音识别] 开始识别音频:', audioPath)
+
+    try {
+      // 这里需要调用语音识别API（需要配置微信云开发或第三方服务）
+      // 临时方案：提示用户使用文字输入
+      wx.showModal({
+        title: '语音识别',
+        content: '语音识别功能正在开发中，请使用文字输入',
+        showCancel: false
+      })
+
+      this.setData({ isRecording: false })
+
+    } catch (error) {
+      console.error('[语音识别] 识别失败:', error)
+      wx.showToast({
+        title: '语音识别失败',
+        icon: 'none'
+      })
+      this.setData({ isRecording: false })
+    }
+  },
+
+  // 生成励志视频
+  async generateMotivationalVideo() {
+    const { motivationalText, motivationalStyle, apiBaseUrl } = this.data
+
+    if (!motivationalText.trim()) {
+      wx.showToast({
+        title: '请输入励志内容',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 检查登录状态
+    const userInfo = wx.getStorageSync('userInfo')
+    if (!userInfo || !userInfo.nickName) {
+      wx.showModal({
+        title: '需要登录',
+        content: '请先登录后再生成视频',
+        confirmText: '去登录',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            wx.switchTab({
+              url: '/pages/profile/profile'
+            })
+          }
+        }
+      })
+      return
+    }
+
+    this.setData({
+      errorMessage: '',
+      isGenerating: true,
+      generationProgress: 10,
+      statusText: '准备生成...'
+    })
+
+    try {
+      // 构建风格提示词
+      const stylePrompts = {
+        'landscape': 'Beautiful Chinese landscape with mountains, mist, traditional architecture, serene and peaceful atmosphere, cinematic lighting',
+        'tea': 'Traditional Chinese tea picking scene, ancient tea garden, ladies in hanfu picking tea leaves, gentle morning light, poetic atmosphere',
+        'garden': 'Classical Chinese garden, pavilions, koi pond, lanterns, traditional decorations, elegant and tranquil mood',
+        'bamboo': 'Bamboo forest path, traditional chinese ink painting style, gentle breeze, zen atmosphere, spiritual and calm'
+      }
+
+      const stylePrompt = stylePrompts[motivationalStyle] || stylePrompts['landscape']
+      const finalPrompt = `${stylePrompt}, motivational video with inspirational Chinese text overlay: "${motivationalText}", slow and elegant camera movement, 4K quality`
+
+      console.log('[励志视频] 生成提示词:', finalPrompt)
+
+      this.setData({
+        generationProgress: 20,
+        statusText: '正在生成视频...'
+      })
+
+      // 调用视频生成API
+      const requestPromise = new Promise((resolve, reject) => {
+        wx.request({
+          url: `${apiBaseUrl}/api/generate-video`,
+          method: 'POST',
+          data: {
+            prompt: finalPrompt,
+            seconds: 8,  // 固定8秒
+            size: '1280x720'  // 横屏
+          },
+          header: {
+            'content-type': 'application/json'
+          },
+          success: (res) => {
+            console.log('[励志视频] API响应:', res.data)
+            resolve(res)
+          },
+          fail: (err) => {
+            console.error('[励志视频] 请求失败:', err)
+            reject(new Error(`请求失败: ${err.errMsg}`))
+          }
+        })
+      })
+
+      const res = await requestPromise
+
+      if (!res.data || !res.data.success) {
+        throw new Error(res.data?.error || '生成失败')
+      }
+
+      const videoId = res.data.videoId
+      console.log('[励志视频] 任务创建成功:', videoId)
+
+      this.setData({
+        generationProgress: 30,
+        statusText: '等待视频生成...',
+        currentVideoId: videoId
+      })
+
+      // 轮询视频状态
+      await this.pollMotivationalVideoStatus(videoId, apiBaseUrl)
+
+    } catch (error) {
+      console.error('[励志视频] 生成失败:', error)
+      this.setData({
+        errorMessage: error.message || '生成失败',
+        isGenerating: false,
+        generationProgress: 0
+      })
+
+      wx.showToast({
+        title: error.message || '生成失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  // 轮询励志视频状态
+  async pollMotivationalVideoStatus(videoId, apiBaseUrl) {
+    const pollInterval = 3000
+
+    const poll = async () => {
+      try {
+        const res = await new Promise((resolve, reject) => {
+          wx.request({
+            url: `${apiBaseUrl}/api/video-status/${videoId}`,
+            method: 'GET',
+            success: (res) => resolve(res),
+            fail: (err) => reject(err)
+          })
+        })
+
+        if (!res.data || !res.data.success) {
+          throw new Error('查询状态失败')
+        }
+
+        const status = res.data.status
+        const progress = res.data.progress
+
+        const actualProgress = 30 + (progress * 0.6)  // 30%-90%
+        const statusMap = {
+          'queued': '排队中',
+          'in_progress': '生成中',
+          'completed': '已完成',
+          'failed': '失败'
+        }
+
+        this.setData({
+          generationProgress: actualProgress,
+          statusText: `${statusMap[status]} (${Math.round(actualProgress)}%)`
+        })
+
+        console.log(`[励志视频] ${statusMap[status]}: ${Math.round(actualProgress)}%`)
+
+        if (status === 'completed') {
+          console.log('[励志视频] 视频生成完成')
+
+          this.setData({
+            statusText: '等待视频就绪...'
+          })
+
+          await new Promise(resolve => setTimeout(resolve, 5000))
+
+          this.setData({
+            generationProgress: 90,
+            statusText: '正在下载视频...'
+          })
+
+          await this.waitForVideoReady(videoId, apiBaseUrl)
+
+          const localPath = await this.downloadVideoWithRetry(videoId, apiBaseUrl, 3)
+
+          this.setData({
+            generationProgress: 95,
+            statusText: '正在上传到云存储...'
+          })
+
+          const timestamp = Date.now()
+          const cloudPath = `motivational_videos/${timestamp}.mp4`
+          const uploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
+
+          await this.saveMotivationalVideoToDatabase(uploadResult, timestamp, videoId)
+
+          this.setData({
+            isGenerating: false,
+            generationProgress: 100,
+            statusText: '生成完成！'
+          })
+
+          wx.showToast({
+            title: '已保存到作品',
+            icon: 'success'
+          })
+
+          setTimeout(() => {
+            this.setData({
+              showMotivationalView: false,
+              motivationalText: '',
+              isGenerating: false,
+              generationProgress: 0,
+              statusText: ''
+            })
+          }, 2000)
+
+          wx.removeSavedFile({
+            filePath: localPath,
+            success: () => console.log('[励志视频] 临时文件已删除')
+          })
+
+          return
+
+        } else if (status === 'failed') {
+          throw new Error(res.data.error || '视频生成失败')
+
+        } else {
+          setTimeout(() => {
+            if (this.data.currentVideoId === videoId) {
+              poll()
+            }
+          }, pollInterval)
+        }
+
+      } catch (error) {
+        console.error('[励志视频] 状态查询失败:', error)
+
+        if (error.message && error.message.includes('视频任务不存在')) {
+          this.setData({
+            isGenerating: false,
+            errorMessage: '服务器重启，请重新生成'
+          })
+          return
+        }
+
+        if (this.data.currentVideoId !== videoId) {
+          return
+        }
+
+        setTimeout(() => {
+          if (this.data.currentVideoId === videoId) {
+            poll()
+          }
+        }, pollInterval)
+      }
+    }
+
+    poll()
+  },
+
+  // 保存励志视频到数据库
+  async saveMotivationalVideoToDatabase(uploadResult, timestamp, videoId) {
+    try {
+      const db = wx.cloud.database()
+
+      const userInfo = wx.getStorageSync('userInfo')
+      if (!userInfo || !userInfo.nickName) {
+        throw new Error('用户未登录')
+      }
+
+      const date = new Date(timestamp)
+      const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+
+      const data = {
+        type: 'motivational-video',
+        text: this.data.motivationalText,
+        style: this.data.motivationalStyle,
+        fileID: uploadResult.fileID,
+        httpURL: uploadResult.tempFileURL || uploadResult.fileID,
+        status: 'completed',
+        createTime: db.serverDate(),
+        date: dateStr,
+        timestamp: timestamp,
+        userInfo: {
+          nickName: userInfo.nickName,
+          avatarUrl: userInfo.avatarUrl
+        },
+        viewCount: 0,
+        likeCount: 0
+      }
+
+      if (videoId) {
+        data.videoId = videoId
+      }
+
+      console.log('[励志视频] 保存数据:', data)
+
+      await db.collection('videos').add({
+        data: data
+      })
+
+      console.log('[励志视频] 保存成功')
+
+    } catch (error) {
+      console.error('[励志视频] 保存失败:', error)
+      throw error
+    }
+  },
+
+  // ========== 宠物开口说话功能 ==========
+
+  // 选择宠物图片
+  choosePetImage() {
+    const that = this
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      maxDuration: 30,
+      camera: 'back',
+      success(res) {
+        console.log('[宠物说话] 选择图片成功:', res.tempFiles[0].tempFilePath)
+
+        wx.getImageInfo({
+          src: res.tempFiles[0].tempFilePath,
+          success(imgInfo) {
+            console.log('[宠物说话] 图片尺寸:', imgInfo.width, 'x', imgInfo.height)
+
+            that.setData({
+              petImageUrl: res.tempFiles[0].tempFilePath
+            })
+          },
+          fail(err) {
+            console.error('[宠物说话] 获取图片信息失败:', err)
+            wx.showToast({
+              title: '图片加载失败',
+              icon: 'none'
+            })
+          }
+        })
+      },
+      fail(err) {
+        console.error('[宠物说话] 选择图片失败:', err)
+        if (err.errMsg && !err.errMsg.includes('cancel')) {
+          wx.showToast({
+            title: '选择图片失败',
+            icon: 'none'
+          })
+        }
+      }
+    })
+  },
+
+  // 宠物台词输入
+  onPetDialogueInput(e) {
+    this.setData({
+      petDialogue: e.detail.value
+    })
+  },
+
+  // 随机生成搞笑台词
+  generateRandomDialogue() {
+    const dialogues = this.data.funnyDialogues
+    const randomIndex = Math.floor(Math.random() * dialogues.length)
+    const randomDialogue = dialogues[randomIndex]
+
+    console.log('[宠物说话] 随机台词:', randomDialogue)
+
+    this.setData({
+      petDialogue: randomDialogue
+    })
+
+    wx.showToast({
+      title: '已生成随机台词',
+      icon: 'success'
+    })
+  },
+
+  // 生成宠物说话视频
+  async generatePetTalkVideo() {
+    const { petImageUrl, petDialogue, apiBaseUrl } = this.data
+
+    if (!petImageUrl) {
+      wx.showToast({
+        title: '请先上传宠物照片',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 检查登录状态
+    const userInfo = wx.getStorageSync('userInfo')
+    if (!userInfo || !userInfo.nickName) {
+      wx.showModal({
+        title: '需要登录',
+        content: '请先登录后再生成视频',
+        confirmText: '去登录',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            wx.switchTab({
+              url: '/pages/profile/profile'
+            })
+          }
+        }
+      })
+      return
+    }
+
+    // 如果没有输入台词，随机生成
+    const finalDialogue = petDialogue.trim() || this.data.funnyDialogues[Math.floor(Math.random() * this.data.funnyDialogues.length)]
+
+    console.log('[宠物说话] 使用台词:', finalDialogue)
+
+    this.setData({
+      errorMessage: '',
+      isGenerating: true,
+      generationProgress: 10,
+      statusText: '准备生成...'
+    })
+
+    try {
+      // 第一步：上传宠物图片到云存储
+      this.setData({
+        generationProgress: 20,
+        statusText: '正在上传宠物照片...'
+      })
+
+      const timestamp = Date.now()
+      const cloudPath = `pet_input/${timestamp}.png`
+      const uploadResult = await cloudStorage.uploadFile(petImageUrl, cloudPath)
+
+      console.log('[宠物说话] 图片上传成功:', uploadResult.fileID)
+
+      // 第二步：生成首帧图片（宠物+台词）
+      this.setData({
+        generationProgress: 40,
+        statusText: '正在生成首帧图片...'
+      })
+
+      // 构建生成首帧的提示词
+      const firstFramePrompt = `A cute pet (cat or dog) with a speech bubble containing Chinese text "${finalDialogue}", the pet is looking at the camera with a cute expression, warm and cozy lighting, high quality, realistic style`
+
+      const firstFrameRequest = await new Promise((resolve, reject) => {
+        wx.request({
+          url: `${apiBaseUrl}/api/generate-image`,
+          method: 'POST',
+          data: {
+            prompt: firstFramePrompt,
+            orientation: 'horizontal'
+          },
+          header: {
+            'content-type': 'application/json'
+          },
+          success: (res) => resolve(res),
+          fail: (err) => reject(err)
+        })
+      })
+
+      if (!firstFrameRequest.data || !firstFrameRequest.data.success) {
+        throw new Error(firstFrameRequest.data?.error || '生成首帧失败')
+      }
+
+      const firstFrameUrl = firstFrameRequest.data.imageUrl
+      console.log('[宠物说话] 首帧图片生成成功:', firstFrameUrl)
+
+      this.setData({
+        generationProgress: 60,
+        statusText: '正在生成视频...'
+      })
+
+      // 第三步：基于首帧生成8秒视频
+      const videoRequest = await new Promise((resolve, reject) => {
+        wx.request({
+          url: `${apiBaseUrl}/api/generate-video`,
+          method: 'POST',
+          data: {
+            prompt: `Cute pet talking and making cute expressions, warm lighting, the pet is playful and adorable, high quality video, natural movement`,
+            seconds: 8,
+            size: '1280x720',
+            imageUrl: firstFrameUrl
+          },
+          header: {
+            'content-type': 'application/json'
+          },
+          success: (res) => resolve(res),
+          fail: (err) => reject(err)
+        })
+      })
+
+      if (!videoRequest.data || !videoRequest.data.success) {
+        throw new Error(videoRequest.data?.error || '生成视频失败')
+      }
+
+      const videoId = videoRequest.data.videoId
+      console.log('[宠物说话] 视频任务创建成功:', videoId)
+
+      this.setData({
+        currentVideoId: videoId,
+        generationProgress: 70,
+        statusText: '等待视频生成...'
+      })
+
+      // 轮询视频状态
+      await this.pollPetTalkVideoStatus(videoId, apiBaseUrl, uploadResult.fileID, finalDialogue)
+
+    } catch (error) {
+      console.error('[宠物说话] 生成失败:', error)
+      this.setData({
+        errorMessage: error.message || '生成失败',
+        isGenerating: false,
+        generationProgress: 0
+      })
+
+      wx.showToast({
+        title: error.message || '生成失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  // 轮询宠物说话视频状态
+  async pollPetTalkVideoStatus(videoId, apiBaseUrl, inputImageFileID, dialogue) {
+    const pollInterval = 3000
+
+    const poll = async () => {
+      try {
+        const res = await new Promise((resolve, reject) => {
+          wx.request({
+            url: `${apiBaseUrl}/api/video-status/${videoId}`,
+            method: 'GET',
+            success: (res) => resolve(res),
+            fail: (err) => reject(err)
+          })
+        })
+
+        if (!res.data || !res.data.success) {
+          throw new Error('查询状态失败')
+        }
+
+        const status = res.data.status
+        const progress = res.data.progress
+
+        const actualProgress = 70 + (progress * 0.25)  // 70%-95%
+        const statusMap = {
+          'queued': '排队中',
+          'in_progress': '生成中',
+          'completed': '已完成',
+          'failed': '失败'
+        }
+
+        this.setData({
+          generationProgress: actualProgress,
+          statusText: `${statusMap[status]} (${Math.round(actualProgress)}%)`
+        })
+
+        console.log(`[宠物说话] ${statusMap[status]}: ${Math.round(actualProgress)}%`)
+
+        if (status === 'completed') {
+          console.log('[宠物说话] 视频生成完成')
+
+          this.setData({
+            statusText: '等待视频就绪...'
+          })
+
+          await new Promise(resolve => setTimeout(resolve, 5000))
+
+          this.setData({
+            generationProgress: 95,
+            statusText: '正在下载视频...'
+          })
+
+          await this.waitForVideoReady(videoId, apiBaseUrl)
+
+          const localPath = await this.downloadVideoWithRetry(videoId, apiBaseUrl, 3)
+
+          this.setData({
+            generationProgress: 98,
+            statusText: '正在上传到云存储...'
+          })
+
+          const timestamp = Date.now()
+          const cloudPath = `pet_videos/${timestamp}.mp4`
+          const uploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
+
+          await this.savePetTalkVideoToDatabase(uploadResult, timestamp, videoId, inputImageFileID, dialogue)
+
+          this.setData({
+            isGenerating: false,
+            generationProgress: 100,
+            statusText: '生成完成！'
+          })
+
+          wx.showToast({
+            title: '已保存到作品',
+            icon: 'success'
+          })
+
+          setTimeout(() => {
+            this.setData({
+              showPetTalkView: false,
+              petImageUrl: '',
+              petDialogue: '',
+              isGenerating: false,
+              generationProgress: 0,
+              statusText: ''
+            })
+          }, 2000)
+
+          wx.removeSavedFile({
+            filePath: localPath,
+            success: () => console.log('[宠物说话] 临时文件已删除')
+          })
+
+          return
+
+        } else if (status === 'failed') {
+          throw new Error(res.data.error || '视频生成失败')
+
+        } else {
+          setTimeout(() => {
+            if (this.data.currentVideoId === videoId) {
+              poll()
+            }
+          }, pollInterval)
+        }
+
+      } catch (error) {
+        console.error('[宠物说话] 状态查询失败:', error)
+
+        if (error.message && error.message.includes('视频任务不存在')) {
+          this.setData({
+            isGenerating: false,
+            errorMessage: '服务器重启，请重新生成'
+          })
+          return
+        }
+
+        if (this.data.currentVideoId !== videoId) {
+          return
+        }
+
+        setTimeout(() => {
+          if (this.data.currentVideoId === videoId) {
+            poll()
+          }
+        }, pollInterval)
+      }
+    }
+
+    poll()
+  },
+
+  // 保存宠物说话视频到数据库
+  async savePetTalkVideoToDatabase(uploadResult, timestamp, videoId, inputImageFileID, dialogue) {
+    try {
+      const db = wx.cloud.database()
+
+      const userInfo = wx.getStorageSync('userInfo')
+      if (!userInfo || !userInfo.nickName) {
+        throw new Error('用户未登录')
+      }
+
+      const date = new Date(timestamp)
+      const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+
+      const data = {
+        type: 'pet-talk-video',
+        inputImage: inputImageFileID,
+        dialogue: dialogue,
+        fileID: uploadResult.fileID,
+        httpURL: uploadResult.tempFileURL || uploadResult.fileID,
+        status: 'completed',
+        createTime: db.serverDate(),
+        date: dateStr,
+        timestamp: timestamp,
+        userInfo: {
+          nickName: userInfo.nickName,
+          avatarUrl: userInfo.avatarUrl
+        },
+        viewCount: 0,
+        likeCount: 0
+      }
+
+      if (videoId) {
+        data.videoId = videoId
+      }
+
+      console.log('[宠物说话] 保存数据:', data)
+
+      await db.collection('videos').add({
+        data: data
+      })
+
+      console.log('[宠物说话] 保存成功')
+
+    } catch (error) {
+      console.error('[宠物说话] 保存失败:', error)
+      throw error
+    }
+  },
+
+  // ========== 我是达芬奇功能 ==========
+
+  // 子风格数据配置
+  davinciSubStylesConfig: {
+    'oil': [
+      { id: 'impressionism', name: '印象派', description: '莫奈风格，柔和色彩和光影' },
+      { id: 'van-gogh', name: '梵高风格', description: '星空、向日葵的笔触' },
+      { id: 'renaissance', name: '文艺复兴', description: '达芬奇时代的经典油画' },
+      { id: 'portrait', name: '古典肖像', description: '油画质感的人像作品' }
+    ],
+    'pencil': [
+      { id: 'sketch', name: '素描', description: '快速勾勒的线条风格' },
+      { id: 'detailed', name: '精细素描', description: '细节丰富的铅笔画' },
+      { id: 'charcoal', name: '炭笔画', description: '粗糙质感的炭笔风格' },
+      { id: 'cross-hatch', name: '交叉排线', description: '经典排线技法' }
+    ],
+    'ink': [
+      { id: 'mountain-water', name: '山水画', description: '山水意境的水墨风格' },
+      { id: 'flower-bird', name: '花鸟画', description: '花鸟主题的水墨画' },
+      { id: 'figure', name: '人物水墨', description: '人物主题的水墨风格' },
+      { id: 'free-style', name: '写意水墨', description: '自由奔放的写意风格' }
+    ]
+  },
+
+  // 风格提示词映射
+  davinciStylePrompts: {
+    'oil': {
+      'base': 'Oil painting style, classic brushstrokes, rich colors, canvas texture',
+      'impressionism': ', Claude Monet impressionist style, soft colors, light effects, visible brushwork',
+      'van-gogh': ', Vincent van Gogh style, bold brushstrokes, swirling patterns, vibrant colors',
+      'renaissance': ', Renaissance oil painting style, sfumato technique, classical composition',
+      'portrait': ', classical portrait oil painting, chiaroscuro lighting, smooth skin tones'
+    },
+    'pencil': {
+      'base': 'Pencil drawing, graphite, sketch lines, shading',
+      'sketch': ', quick pencil sketch, loose lines, gestural drawing',
+      'detailed': ', detailed pencil drawing, fine lines, precise shading',
+      'charcoal': ', charcoal drawing, rough texture, smudged effects',
+      'cross-hatch': ', pencil drawing with cross-hatching technique, precise lines'
+    },
+    'ink': {
+      'base': 'Traditional Chinese ink painting, black ink, white paper, brush strokes',
+      'mountain-water': ', Chinese landscape painting (Shan Shui), misty mountains, flowing water',
+      'flower-bird': ', Chinese flower and bird painting, delicate brushwork, elegant composition',
+      'figure': ', Chinese figure painting, calligraphic lines, expressive gesture',
+      'free-style': ', Xieyi style freehand painting, bold brushwork, spontaneous expression'
+    }
+  },
+
+  // 切换达芬奇主风格
+  onDavinciStyleChange(e) {
+    const style = e.currentTarget.dataset.style
+    console.log('[达芬奇] 切换主风格:', style)
+
+    // 加载对应的子风格
+    const subStyles = this.davinciSubStylesConfig[style] || []
+
+    this.setData({
+      davinciStyle: style,
+      davinciSubStyles: subStyles,
+      selectedDavinciSubStyle: subStyles.length > 0 ? subStyles[0].id : ''  // 默认选中第一个
+    })
+  },
+
+  // 切换达芬奇子风格
+  onDavinciSubStyleChange(e) {
+    const subStyle = e.currentTarget.dataset.substyle
+    console.log('[达芬奇] 切换子风格:', subStyle)
+
+    this.setData({
+      selectedDavinciSubStyle: subStyle
+    })
+  },
+
+  // 切换输出类型
+  onDavinciOutputTypeChange(e) {
+    const type = e.currentTarget.dataset.type
+    console.log('[达芬奇] 切换输出类型:', type)
+
+    this.setData({
+      davinciOutputType: type
+    })
+  },
+
+  // 选择达芬奇图片
+  chooseDaVinciImage() {
+    const that = this
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      maxDuration: 30,
+      camera: 'back',
+      success(res) {
+        console.log('[达芬奇] 选择图片成功:', res.tempFiles[0].tempFilePath)
+
+        wx.getImageInfo({
+          src: res.tempFiles[0].tempFilePath,
+          success(imgInfo) {
+            console.log('[达芬奇] 图片尺寸:', imgInfo.width, 'x', imgInfo.height)
+
+            that.setData({
+              davinciImageUrl: res.tempFiles[0].tempFilePath
+            })
+          },
+          fail(err) {
+            console.error('[达芬奇] 获取图片信息失败:', err)
+            wx.showToast({
+              title: '图片加载失败',
+              icon: 'none'
+            })
+          }
+        })
+      },
+      fail(err) {
+        console.error('[达芬奇] 选择图片失败:', err)
+        if (err.errMsg && !err.errMsg.includes('cancel')) {
+          wx.showToast({
+            title: '选择图片失败',
+            icon: 'none'
+          })
+        }
+      }
+    })
+  },
+
+  // 达芬奇文字输入
+  onDavinciTextInput(e) {
+    this.setData({
+      davinciText: e.detail.value
+    })
+  },
+
+  // 生成达芬奇作品
+  async generateDaVinciWork() {
+    const { davinciStyle, davinciImageUrl, davinciText, davinciOutputType, selectedDavinciSubStyle, apiBaseUrl } = this.data
+
+    if (!davinciStyle) {
+      wx.showToast({
+        title: '请选择绘画风格',
+        icon: 'none'
+      })
+      return
+    }
+
+    if (!davinciText.trim()) {
+      wx.showToast({
+        title: '请输入描述内容',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 检查登录状态
+    const userInfo = wx.getStorageSync('userInfo')
+    if (!userInfo || !userInfo.nickName) {
+      wx.showModal({
+        title: '需要登录',
+        content: '请先登录后再生成作品',
+        confirmText: '去登录',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            wx.switchTab({
+              url: '/pages/profile/profile'
+            })
+          }
+        }
+      })
+      return
+    }
+
+    this.setData({
+      errorMessage: '',
+      isGenerating: true,
+      generationProgress: 10,
+      statusText: '准备生成...'
+    })
+
+    try {
+      // 构建风格提示词
+      const styleConfig = this.davinciStylePrompts[davinciStyle]
+      const basePrompt = styleConfig.base
+      const subStylePrompt = selectedDavinciSubStyle ? styleConfig[selectedDavinciSubStyle] || '' : ''
+      const finalPrompt = `${davinciText} ${basePrompt}${subStylePrompt}, high quality, artistic`
+
+      console.log('[达芬奇] 生成提示词:', finalPrompt)
+
+      let uploadedImageUrl = ''
+
+      // 如果有上传图片，先上传到云存储
+      if (davinciImageUrl) {
+        this.setData({
+          generationProgress: 20,
+          statusText: '正在上传参考图片...'
+        })
+
+        const timestamp = Date.now()
+        const cloudPath = `davinci_input/${timestamp}.png`
+        const uploadResult = await cloudStorage.uploadFile(davinciImageUrl, cloudPath)
+
+        console.log('[达芬奇] 参考图片上传成功:', uploadResult.fileID)
+        uploadedImageUrl = uploadResult.tempFileURL || uploadResult.fileID
+      }
+
+      if (davinciOutputType === 'image') {
+        // 生成图片
+        await this.generateDaVinciImage(finalPrompt, uploadedImageUrl)
+      } else {
+        // 生成视频
+        await this.generateDaVinciVideo(finalPrompt, uploadedImageUrl)
+      }
+
+    } catch (error) {
+      console.error('[达芬奇] 生成失败:', error)
+      this.setData({
+        errorMessage: error.message || '生成失败',
+        isGenerating: false,
+        generationProgress: 0
+      })
+
+      wx.showToast({
+        title: error.message || '生成失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  // 生成达芬奇图片
+  async generateDaVinciImage(prompt, referenceImage) {
+    const { apiBaseUrl } = this.data
+
+    this.setData({
+      generationProgress: 40,
+      statusText: '正在生成画作...'
+    })
+
+    // 调用生图API
+    const requestPromise = new Promise((resolve, reject) => {
+      console.log('[达芬奇] 请求URL:', `${apiBaseUrl}/api/generate-image`)
+      const requestData = {
+        prompt: prompt,
+        orientation: 'horizontal'
+      }
+
+      // 如果有参考图片，添加到请求中
+      if (referenceImage) {
+        requestData.imageUrl = referenceImage
+      }
+
+      wx.request({
+        url: `${apiBaseUrl}/api/generate-image`,
+        method: 'POST',
+        data: requestData,
+        header: {
+          'content-type': 'application/json'
+        },
+        success: (res) => resolve(res),
+        fail: (err) => reject(err)
+      })
+    })
+
+    const res = await requestPromise
+
+    if (!res.data || !res.data.success) {
+      throw new Error(res.data?.error || '生成失败')
+    }
+
+    const imageUrl = res.data.imageUrl
+    console.log('[达芬奇] 图片生成成功:', imageUrl)
+
+    // 下载图片
+    this.setData({
+      generationProgress: 60,
+      statusText: '正在下载图片...'
+    })
+
+    const localPath = await this.downloadImageToLocal(imageUrl, apiBaseUrl)
+
+    // 上传到云存储
+    this.setData({
+      generationProgress: 80,
+      statusText: '正在保存到作品...'
+    })
+
+    const timestamp = Date.now()
+    const cloudPath = `davinci_images/${timestamp}.png`
+    const uploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
+
+    await this.saveDaVinciResultToDatabase(uploadResult, timestamp, 'image')
+
+    this.setData({
+      isGenerating: false,
+      imageUrl: uploadResult.tempFileURL || uploadResult.fileID,
+      generationProgress: 100,
+      statusText: '生成完成！'
+    })
+
+    wx.showToast({
+      title: '已保存到作品',
+      icon: 'success'
+    })
+
+    // 清理临时文件
+    wx.removeSavedFile({
+      filePath: localPath,
+      success: () => console.log('[达芬奇] 临时文件已删除')
+    })
+  },
+
+  // 生成达芬奇视频
+  async generateDaVinciVideo(prompt, referenceImage) {
+    const { apiBaseUrl } = this.data
+
+    this.setData({
+      generationProgress: 40,
+      statusText: '正在生成视频...'
+    })
+
+    // 调用视频生成API
+    const requestPromise = new Promise((resolve, reject) => {
+      console.log('[达芬奇] 请求URL:', `${apiBaseUrl}/api/generate-video`)
+      const requestData = {
+        prompt: prompt,
+        seconds: 8,
+        size: '1280x720'
+      }
+
+      // 如果有参考图片，添加到请求中
+      if (referenceImage) {
+        requestData.imageUrl = referenceImage
+      }
+
+      wx.request({
+        url: `${apiBaseUrl}/api/generate-video`,
+        method: 'POST',
+        data: requestData,
+        header: {
+          'content-type': 'application/json'
+        },
+        success: (res) => resolve(res),
+        fail: (err) => reject(err)
+      })
+    })
+
+    const res = await requestPromise
+
+    if (!res.data || !res.data.success) {
+      throw new Error(res.data?.error || '生成失败')
+    }
+
+    const videoId = res.data.videoId
+    console.log('[达芬奇] 视频任务创建成功:', videoId)
+
+    this.setData({
+      currentVideoId: videoId,
+      generationProgress: 50,
+      statusText: '等待视频生成...'
+    })
+
+    // 轮询视频状态
+    await this.pollDaVinciVideoStatus(videoId, apiBaseUrl)
+  },
+
+  // 轮询达芬奇视频状态
+  async pollDaVinciVideoStatus(videoId, apiBaseUrl) {
+    const pollInterval = 3000
+
+    const poll = async () => {
+      try {
+        const res = await new Promise((resolve, reject) => {
+          wx.request({
+            url: `${apiBaseUrl}/api/video-status/${videoId}`,
+            method: 'GET',
+            success: (res) => resolve(res),
+            fail: (err) => reject(err)
+          })
+        })
+
+        if (!res.data || !res.data.success) {
+          throw new Error('查询状态失败')
+        }
+
+        const status = res.data.status
+        const progress = res.data.progress
+
+        const actualProgress = 50 + (progress * 0.45)  // 50%-95%
+        const statusMap = {
+          'queued': '排队中',
+          'in_progress': '生成中',
+          'completed': '已完成',
+          'failed': '失败'
+        }
+
+        this.setData({
+          generationProgress: actualProgress,
+          statusText: `${statusMap[status]} (${Math.round(actualProgress)}%)`
+        })
+
+        console.log(`[达芬奇] ${statusMap[status]}: ${Math.round(actualProgress)}%`)
+
+        if (status === 'completed') {
+          console.log('[达芬奇] 视频生成完成')
+
+          this.setData({
+            statusText: '等待视频就绪...'
+          })
+
+          await new Promise(resolve => setTimeout(resolve, 5000))
+
+          this.setData({
+            generationProgress: 95,
+            statusText: '正在下载视频...'
+          })
+
+          await this.waitForVideoReady(videoId, apiBaseUrl)
+
+          const localPath = await this.downloadVideoWithRetry(videoId, apiBaseUrl, 3)
+
+          this.setData({
+            generationProgress: 98,
+            statusText: '正在上传到云存储...'
+          })
+
+          const timestamp = Date.now()
+          const cloudPath = `davinci_videos/${timestamp}.mp4`
+          const uploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
+
+          await this.saveDaVinciResultToDatabase(uploadResult, timestamp, 'video', videoId)
+
+          this.setData({
+            isGenerating: false,
+            generationProgress: 100,
+            statusText: '生成完成！'
+          })
+
+          wx.showToast({
+            title: '已保存到作品',
+            icon: 'success'
+          })
+
+          setTimeout(() => {
+            this.setData({
+              showDaVinciView: false,
+              davinciImageUrl: '',
+              davinciText: '',
+              isGenerating: false,
+              generationProgress: 0,
+              statusText: ''
+            })
+          }, 2000)
+
+          wx.removeSavedFile({
+            filePath: localPath,
+            success: () => console.log('[达芬奇] 临时文件已删除')
+          })
+
+          return
+
+        } else if (status === 'failed') {
+          throw new Error(res.data.error || '视频生成失败')
+
+        } else {
+          setTimeout(() => {
+            if (this.data.currentVideoId === videoId) {
+              poll()
+            }
+          }, pollInterval)
+        }
+
+      } catch (error) {
+        console.error('[达芬奇] 状态查询失败:', error)
+
+        if (error.message && error.message.includes('视频任务不存在')) {
+          this.setData({
+            isGenerating: false,
+            errorMessage: '服务器重启，请重新生成'
+          })
+          return
+        }
+
+        if (this.data.currentVideoId !== videoId) {
+          return
+        }
+
+        setTimeout(() => {
+          if (this.data.currentVideoId === videoId) {
+            poll()
+          }
+        }, pollInterval)
+      }
+    }
+
+    poll()
+  },
+
+  // 保存达芬奇作品到数据库
+  async saveDaVinciResultToDatabase(uploadResult, timestamp, type, videoId = null) {
+    try {
+      const db = wx.cloud.database()
+
+      const userInfo = wx.getStorageSync('userInfo')
+      if (!userInfo || !userInfo.nickName) {
+        throw new Error('用户未登录')
+      }
+
+      const date = new Date(timestamp)
+      const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+
+      const data = {
+        type: type === 'image' ? 'davinci-image' : 'davinci-video',
+        style: this.data.davinciStyle,
+        subStyle: this.data.selectedDavinciSubStyle,
+        text: this.data.davinciText,
+        inputImage: this.data.davinciImageUrl || '',
+        fileID: uploadResult.fileID,
+        httpURL: uploadResult.tempFileURL || uploadResult.fileID,
+        status: 'completed',
+        createTime: db.serverDate(),
+        date: dateStr,
+        timestamp: timestamp,
+        userInfo: {
+          nickName: userInfo.nickName,
+          avatarUrl: userInfo.avatarUrl
+        },
+        viewCount: 0,
+        likeCount: 0
+      }
+
+      if (videoId) {
+        data.videoId = videoId
+      }
+
+      console.log('[达芬奇] 保存数据:', data)
+
+      const collectionName = type === 'image' ? 'images' : 'videos'
+      await db.collection(collectionName).add({
+        data: data
+      })
+
+      console.log('[达芬奇] 保存成功')
+
+    } catch (error) {
+      console.error('[达芬奇] 保存失败:', error)
       throw error
     }
   }
