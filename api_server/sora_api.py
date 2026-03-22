@@ -1164,6 +1164,303 @@ def generate_smile_video():
         }), 500
 
 
+
+
+@app.route('/api/enhance-upscale', methods=['POST', 'OPTIONS'])
+def enhance_upscale():
+    """提高分辨率（高清修复）的API接口"""
+
+    # 处理预检请求
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        print(f"[高清修复] 收到请求")
+
+        data = request.json
+        if not data:
+            print("[错误] 请求数据为空")
+            return jsonify({
+                'success': False,
+                'error': '请求数据格式错误'
+            }), 400
+
+        image_url = data.get('imageUrl', '')
+
+        if not image_url:
+            print("[错误] imageUrl为空")
+            return jsonify({
+                'success': False,
+                'error': '请提供图片URL'
+            }), 400
+
+        print(f"[参数] imageUrl: {image_url[:50]}...")
+
+        # 1. 下载用户上传的图片
+        import requests
+        from io import BytesIO
+
+        print("[步骤1] 下载用户图片...")
+        try:
+            response = requests.get(image_url, timeout=30)
+            if response.status_code != 200:
+                raise Exception(f"下载图片失败: HTTP {response.status_code}")
+
+            image_bytes = response.content
+            print(f"[步骤1] 图片下载完成，大小: {len(image_bytes)} 字节")
+        except Exception as e:
+            print(f"[错误] 下载图片失败: {e}")
+            return jsonify({
+                'success': False,
+                'error': '下载图片失败'
+            }), 500
+
+        # 2. 使用DALL-E提高分辨率
+        print("[步骤2] 提高分辨率...")
+
+        img = Image.open(BytesIO(image_bytes))
+        original_width, original_height = img.size
+
+        print(f"[高清修复] 原始尺寸: {original_width}x{original_height}")
+
+        # 保存为临时文件
+        timestamp = int(time.time())
+        temp_input_path = os.path.join(IMAGES_DIR, f"enhance_input_{timestamp}.png")
+        img.save(temp_input_path, 'PNG')
+
+        try:
+            # 使用DALL-E 3编辑图片，提高质量和清晰度
+            upscale_prompt = "Enhanced high resolution version with sharper details, better clarity, improved contrast, and more vibrant colors while maintaining the original content, composition, and style."
+
+            # 读取图片并转为base64
+            with open(temp_input_path, 'rb') as f:
+                img_data = f.read()
+
+            img_b64 = base64.b64encode(img_data).decode()
+
+            # 使用DALL-E编辑
+            response = client.images.edit(
+                image=base64.b64decode(img_b64),
+                prompt=upscale_prompt,
+                n=1,
+                size="1024x1024"
+            )
+
+            print(f"[成功] 高清修复完成")
+
+            # 获取生成的图片
+            image_data = response.data[0]
+            image_b64 = image_data.b64_json
+
+            # 解码base64为bytes
+            upscaled_image_bytes = base64.b64decode(image_b64)
+
+            # 保存高清图片
+            upscaled_filename = f"enhance_upscale_{timestamp}.png"
+            upscaled_filepath = os.path.join(IMAGES_DIR, upscaled_filename)
+
+            with open(upscaled_filepath, 'wb') as f:
+                f.write(upscaled_image_bytes)
+
+            print(f"[保存] 高清图片已保存: {upscaled_filepath}")
+
+            # 裁剪为原始宽高比
+            final_filename = f"enhance_upscale_final_{timestamp}.png"
+            final_path = os.path.join(IMAGES_DIR, final_filename)
+
+            # 根据原始比例决定最终尺寸
+            if original_width > original_height:
+                # 横向
+                target_width, target_height = 1792, 1024
+            else:
+                # 纵向
+                target_width, target_height = 1024, 1792
+
+            crop_image_to_sora_size(upscaled_filepath, final_path, target_width, target_height)
+
+            print(f"[保存] 最终图片已保存: {final_path}")
+
+        except Exception as e:
+            print(f"[错误] DALL-E高清修复失败: {e}")
+            import traceback
+            traceback.print_exc()
+            # 如果DALL-E失败，返回原始图片
+            final_path = temp_input_path
+            final_filename = os.path.basename(temp_input_path)
+
+        # 4. 清理临时文件
+        try:
+            if temp_input_path != final_path:
+                os.remove(temp_input_path)
+                print("[清理] 临时文件已删除")
+        except:
+            pass
+
+        # 返回结果
+        response_data = {
+            'success': True,
+            'imageUrl': f'/images/{final_filename}',
+            'originalSize': f'{original_width}x{original_height}'
+        }
+
+        print(f"[响应] 返回高清修复结果: {response_data}")
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        print(f"[错误] 高清修复失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'处理失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/enhance-animate', methods=['POST', 'OPTIONS'])
+def enhance_animate():
+    """让照片动起来（轻微晃动）的API接口"""
+
+    # 处理预检请求
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        print(f"[让照片动起来] 收到请求")
+
+        data = request.json
+        if not data:
+            print("[错误] 请求数据为空")
+            return jsonify({
+                'success': False,
+                'error': '请求数据格式错误'
+            }), 400
+
+        image_url = data.get('imageUrl', '')
+        seconds = data.get('seconds', 4)
+
+        if not image_url:
+            print("[错误] imageUrl为空")
+            return jsonify({
+                'success': False,
+                'error': '请提供图片URL'
+            }), 400
+
+        print(f"[参数] imageUrl: {image_url[:50]}..., seconds: {seconds}")
+
+        # 1. 下载用户上传的图片
+        print("[步骤1] 下载用户图片...")
+        import requests
+        from io import BytesIO
+
+        try:
+            response = requests.get(image_url, timeout=30)
+            if response.status_code != 200:
+                raise Exception(f"下载图片失败: HTTP {response.status_code}")
+
+            image_bytes = response.content
+            print(f"[步骤1] 图片下载完成，大小: {len(image_bytes)} 字节")
+        except Exception as e:
+            print(f"[错误] 下载图片失败: {e}")
+            return jsonify({
+                'success': False,
+                'error': '下载图片失败'
+            }), 500
+
+        # 2. 处理图片（裁剪到合适尺寸）
+        print("[步骤2] 处理图片...")
+
+        img = Image.open(BytesIO(image_bytes))
+        original_width, original_height = img.size
+
+        print(f"[动效] 原始尺寸: {original_width}x{original_height}")
+
+        # 根据原图比例决定裁剪方向
+        if original_width > original_height:
+            target_width, target_height = 1280, 720
+            orientation = 'horizontal'
+            size = '1280x720'
+        else:
+            target_width, target_height = 720, 1280
+            orientation = 'vertical'
+            size = '720x1280'
+
+        print(f"[动效] 目标尺寸: {target_width}x{target_height}")
+
+        # 保存为临时文件
+        timestamp = int(time.time())
+        temp_input_path = os.path.join(IMAGES_DIR, f"enhance_animate_input_{timestamp}.png")
+        img.save(temp_input_path, 'PNG')
+
+        # 裁剪图片
+        cropped_filename = f"enhance_animate_{timestamp}.png"
+        cropped_path = os.path.join(IMAGES_DIR, cropped_filename)
+        crop_image_to_sora_size(temp_input_path, cropped_path, target_width, target_height)
+
+        print(f"[步骤2] 图片裁剪完成: {cropped_path}")
+
+        # 3. 清理临时文件
+        try:
+            os.remove(temp_input_path)
+        except:
+            pass
+
+        # 4. 生成视频ID和准备首帧
+        video_id = f"enhance_{timestamp}"
+        frame_url = f"/images/{cropped_filename}"
+
+        print(f"[步骤3] 首帧URL: {frame_url}")
+
+        # 5. 调用Sora API生成视频（轻微晃动效果）
+        print("[步骤4] 调用Sora API生成视频...")
+
+        # 轻微晃动的提示词
+        animate_prompt = f"A person in a still photograph with subtle, gentle movement. The subject has a very slight, natural motion like a gentle sway or breathe, creating a living photo effect. The movement should be minimal and smooth, adding just enough motion to bring the image to life without being distracting. {orientation} frame with natural lighting and composition."
+
+        try:
+            # 创建视频任务
+            video_tasks[video_id] = {
+                'status': 'in_progress',
+                'progress': 0,
+                'prompt': animate_prompt,
+                'size': size,
+                'seconds': seconds,
+                'imageUrl': frame_url,
+                'createdAt': time.time()
+            }
+
+            print(f"[创建] 视频任务已创建: {video_id}")
+
+            response_data = {
+                'success': True,
+                'videoId': video_id,
+                'status': 'in_progress',
+                'imageUrl': frame_url,
+                'message': '动态照片生成任务已创建'
+            }
+
+            print(f"[响应] 返回视频任务: {response_data}")
+            return jsonify(response_data), 200
+
+        except Exception as e:
+            print(f"[错误] 视频生成失败: {e}")
+            if video_id in video_tasks:
+                del video_tasks[video_id]
+
+            return jsonify({
+                'success': False,
+                'error': f'视频生成失败: {str(e)}'
+            }), 500
+
+    except Exception as e:
+        print(f"[错误] 让照片动起来失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'处理失败: {str(e)}'
+        }), 500
+
+
 def crop_image_to_sora_size(input_path, output_path, target_width, target_height):
     """
     将图片裁剪为Sora兼容的指定尺寸

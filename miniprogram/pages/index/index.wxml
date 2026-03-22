@@ -41,12 +41,12 @@
 
       <!-- 小卡片容器 -->
       <view class="small-cards-row">
-        <!-- 卡片2：生图 -->
-        <view class="card card-small" bindtap="enterImageGen">
-          <view class="card-icon-small">🖼️</view>
+        <!-- 卡片2：让照片变清晰 -->
+        <view class="card card-small" bindtap="enterEnhance">
+          <view class="card-icon-small">✨</view>
           <view class="card-small-content">
-            <view class="card-title-small">生图</view>
-            <view class="card-desc-small">AI生成精美图片</view>
+            <view class="card-title-small">让照片变清晰</view>
+            <view class="card-desc-small">高清修复+动态效果</view>
           </view>
         </view>
 
@@ -58,6 +58,65 @@
             <view class="card-desc-small">即将上线</view>
           </view>
         </view>
+      </view>
+    </view>
+
+    <!-- 让照片变清晰界面 -->
+    <view class="enhance-view" wx:if="{{showEnhanceView && !isGenerating}}">
+      <!-- 返回按钮 -->
+      <view class="back-btn" bindtap="backToMain">
+        <text class="back-icon">←</text>
+        <text class="back-text">返回</text>
+      </view>
+
+      <!-- 图片选择区域 -->
+      <view class="upload-section">
+        <view class="upload-label">
+          <text class="label-icon">📷</text>
+          <text class="label-text">选择照片</text>
+        </view>
+
+        <!-- 图片预览 -->
+        <view class="image-preview-container" bindtap="chooseEnhanceImage">
+          <image
+            wx:if="{{enhanceImageUrl}}"
+            class="enhance-preview"
+            src="{{enhanceImageUrl}}"
+            mode="aspectFit"
+          />
+          <view wx:else class="upload-placeholder">
+            <text class="upload-icon">📸</text>
+            <text class="upload-text">点击选择照片</text>
+          </view>
+        </view>
+
+        <!-- 功能选项 -->
+        <view class="enhance-options">
+          <view class="option-header">
+            <text class="option-title">选择功能</text>
+          </view>
+          
+          <view class="option-item" bindtap="onEnhanceTypeChange" data-type="upscale">
+            <view class="option-radio {{enhanceType === 'upscale' ? 'active' : ''}}"></view>
+            <view class="option-content">
+              <text class="option-text">提高分辨率（高清修复）</text>
+              <text class="option-desc">让照片更清晰、更锐利</text>
+            </view>
+          </view>
+          
+          <view class="option-item" bindtap="onEnhanceTypeChange" data-type="animate">
+            <view class="option-radio {{enhanceType === 'animate' ? 'active' : ''}}"></view>
+            <view class="option-content">
+              <text class="option-text">让照片动起来</text>
+              <text class="option-desc">轻微晃动效果，4秒视频</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 生成按钮 -->
+        <button class="generate-btn" bindtap="generateEnhance" disabled="{{!enhanceImageUrl}}">
+          {{enhanceType === 'upscale' ? '提高分辨率' : '生成动态照片'}}
+        </button>
       </view>
     </view>
 

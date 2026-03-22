@@ -251,8 +251,8 @@
   box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
 }
 
-/* 开口笑界面 */
-.smile-view {
+/* 让照片变清晰界面 */
+.enhance-view {
   animation: slideIn 0.3s ease;
 }
 
@@ -274,7 +274,8 @@
   justify-content: center;
 }
 
-.smile-preview {
+.smile-preview,
+.enhance-preview {
   width: 100%;
   height: 400rpx;
 }
@@ -297,13 +298,29 @@
   color: #999;
 }
 
+/* 开口笑选项 */
 .output-options {
   margin: 32rpx 0;
 }
 
+/* 让照片变清晰选项 */
+.enhance-options {
+  margin: 32rpx 0;
+}
+
+.option-header {
+  margin-bottom: 24rpx;
+}
+
+.option-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+}
+
 .option-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 24rpx 0;
   border-bottom: 2rpx solid #f0f0f0;
 }
@@ -318,6 +335,8 @@
   border: 4rpx solid #ddd;
   border-radius: 50%;
   margin-right: 24rpx;
+  margin-top: 8rpx;
+  flex-shrink: 0;
   position: relative;
 }
 
@@ -333,9 +352,22 @@
   border-radius: 50%;
 }
 
+.option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .option-text {
   font-size: 30rpx;
   color: #333;
+  font-weight: 500;
+  margin-bottom: 8rpx;
+}
+
+.option-desc {
+  font-size: 24rpx;
+  color: #999;
 }
 
 /* 视频播放区域 */

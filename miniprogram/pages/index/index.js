@@ -18,6 +18,7 @@ Page({
     showCreateView: false, // 是否显示创作界面
     showImageView: false,  // 是否显示生图界面
     showSmileView: false,  // 是否显示开口笑界面
+    showEnhanceView: false, // 是否显示让照片变清晰界面
 
     // 生图相关
     imagePrompt: '',
@@ -29,6 +30,10 @@ Page({
     // 开口笑相关
     smileImageUrl: '',  // 用户选择的图片
     smileOutputType: 'video',  // 输出类型：'image' 或 'video'
+
+    // 让照片变清晰相关
+    enhanceImageUrl: '',  // 用户选择的图片
+    enhanceType: 'upscale',  // 功能类型：'upscale'（提高分辨率）或 'animate'（让照片动起来）
 
     // 预设prompt风格
     styleOptions: ['无风格'],
@@ -245,12 +250,20 @@ Page({
     })
   },
 
+  enterEnhance() {
+    console.log('[卡片] 进入让照片变清晰界面')
+    this.setData({
+      showEnhanceView: true
+    })
+  },
+
   backToMain() {
     console.log('[返回] 回到主界面')
     this.setData({
       showCreateView: false,
       showImageView: false,
-      showSmileView: false
+      showSmileView: false,
+      showEnhanceView: false
     })
   },
 
@@ -1796,6 +1809,282 @@ Page({
 
     } catch (error) {
       console.error('[开口笑] 保存失败:', error)
+      throw error
+    }
+  },
+
+  // ========== 让照片变清晰功能 ==========
+  chooseEnhanceImage() {
+    const that = this
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      maxDuration: 30,
+      camera: 'back',
+      success(res) {
+        console.log('[让照片变清晰] 选择图片成功:', res.tempFiles[0].tempFilePath)
+
+        wx.getImageInfo({
+          src: res.tempFiles[0].tempFilePath,
+          success(imgInfo) {
+            console.log('[让照片变清晰] 图片尺寸:', imgInfo.width, 'x', imgInfo.height)
+
+            that.setData({
+              enhanceImageUrl: res.tempFiles[0].tempFilePath
+            })
+          },
+          fail(err) {
+            console.error('[让照片变清晰] 获取图片信息失败:', err)
+            wx.showToast({
+              title: '图片加载失败',
+              icon: 'none'
+            })
+          }
+        })
+      },
+      fail(err) {
+        console.error('[让照片变清晰] 选择图片失败:', err)
+        if (err.errMsg && !err.errMsg.includes('cancel')) {
+          wx.showToast({
+            title: '选择图片失败',
+            icon: 'none'
+          })
+        }
+      }
+    })
+  },
+
+  onEnhanceTypeChange(e) {
+    const type = e.currentTarget.dataset.type
+    console.log('[让照片变清晰] 切换功能类型:', type)
+    this.setData({
+      enhanceType: type
+    })
+  },
+
+  async generateEnhance() {
+    const { enhanceImageUrl, enhanceType, apiBaseUrl } = this.data
+
+    if (!enhanceImageUrl) {
+      wx.showToast({
+        title: '请先选择照片',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 清除之前的错误信息
+    this.setData({
+      errorMessage: '',
+      isGenerating: true,
+      generationProgress: 10,
+      statusText: '准备生成...'
+    })
+
+    try {
+      // 第一步：上传图片到云存储
+      this.setData({
+        generationProgress: 20,
+        statusText: '正在上传图片...'
+      })
+
+      const timestamp = Date.now()
+      const cloudPath = `enhance_input/${timestamp}.png`
+
+      const uploadResult = await cloudStorage.uploadFile(enhanceImageUrl, cloudPath)
+      console.log('[让照片变清晰] 图片上传成功:', uploadResult.fileID)
+
+      // 第二步：调用API处理
+      this.setData({
+        generationProgress: 40,
+        statusText: enhanceType === 'upscale' ? '正在提高分辨率...' : '正在生成动态效果...'
+      })
+
+      const apiUrl = enhanceType === 'upscale'
+        ? `${apiBaseUrl}/api/enhance-upscale`
+        : `${apiBaseUrl}/api/enhance-animate`
+
+      const requestData = {
+        imageUrl: uploadResult.tempFileURL || uploadResult.fileID
+      }
+
+      if (enhanceType === 'animate') {
+        requestData.seconds = 4  // 固定4秒
+      }
+
+      const requestPromise = new Promise((resolve, reject) => {
+        console.log('[让照片变清晰] 请求URL:', apiUrl)
+        console.log('[让照片变清晰] 请求数据:', requestData)
+        wx.request({
+          url: apiUrl,
+          method: 'POST',
+          data: requestData,
+          header: {
+            'content-type': 'application/json'
+          },
+          success: (res) => {
+            console.log('[让照片变清晰] API响应:', res.data)
+            resolve(res)
+          },
+          fail: (err) => {
+            console.error('[让照片变清晰] 请求失败:', err)
+            reject(new Error(`请求失败: ${err.errMsg}`))
+          }
+        })
+      })
+
+      const res = await requestPromise
+
+      if (!res.data || !res.data.success) {
+        throw new Error(res.data?.error || '处理失败')
+      }
+
+      const resultUrl = res.data.imageUrl || res.data.videoUrl
+      console.log('[让照片变清晰] 处理成功:', resultUrl)
+
+      if (enhanceType === 'upscale') {
+        // 提高分辨率：下载、上传、保存
+        this.setData({
+          generationProgress: 60,
+          statusText: '正在下载图片...'
+        })
+
+        const localPath = await this.downloadImageToLocal(resultUrl, apiBaseUrl)
+
+        this.setData({
+          generationProgress: 80,
+          statusText: '正在保存到作品...'
+        })
+
+        const outputCloudPath = `enhance_images/${timestamp}.png`
+        const outputUploadResult = await cloudStorage.uploadFile(localPath, outputCloudPath)
+
+        await this.saveEnhanceResultToDatabase(outputUploadResult, timestamp, 'upscale')
+
+        this.setData({
+          isGenerating: false,
+          imageUrl: outputUploadResult.tempFileURL || outputUploadResult.fileID,
+          generationProgress: 100,
+          statusText: '完成！'
+        })
+
+        wx.showToast({
+          title: '已保存到作品',
+          icon: 'success'
+        })
+      } else {
+        // 动态照片：等待、下载、上传、保存
+        this.setData({
+          generationProgress: 60,
+          statusText: '等待视频生成...'
+        })
+
+        const videoId = res.data.videoId || 'enhance_' + timestamp
+
+        await this.waitForVideoReady(videoId, apiBaseUrl)
+
+        this.setData({
+          generationProgress: 70,
+          statusText: '正在下载视频...'
+        })
+
+        const localPath = await this.downloadVideoWithRetry(videoId, apiBaseUrl, 3)
+
+        this.setData({
+          generationProgress: 85,
+          statusText: '正在上传到云存储...'
+        })
+
+        const outputCloudPath = `enhance_videos/${timestamp}.mp4`
+        const outputUploadResult = await cloudStorage.uploadFile(localPath, outputCloudPath)
+
+        this.setData({
+          generationProgress: 95,
+          statusText: '正在保存到作品...'
+        })
+
+        await this.saveEnhanceResultToDatabase(outputUploadResult, timestamp, 'animate', videoId)
+
+        this.setData({
+          isGenerating: false,
+          videoUrl: outputUploadResult.tempFileURL || outputUploadResult.fileID,
+          generationProgress: 100,
+          statusText: '完成！'
+        })
+
+        wx.showToast({
+          title: '已保存到作品',
+          icon: 'success'
+        })
+
+        setTimeout(() => {
+          this.setData({
+            showEnhanceView: false,
+            enhanceImageUrl: ''
+          })
+        }, 2000)
+      }
+
+    } catch (error) {
+      console.error('[让照片变清晰] 处理失败:', error)
+      this.setData({
+        errorMessage: error.message || '处理失败',
+        isGenerating: false,
+        generationProgress: 0
+      })
+
+      wx.showToast({
+        title: error.message || '处理失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  async saveEnhanceResultToDatabase(uploadResult, timestamp, type, videoId = null) {
+    try {
+      const db = wx.cloud.database()
+
+      const userInfo = wx.getStorageSync('userInfo')
+      if (!userInfo || !userInfo.nickName) {
+        throw new Error('用户未登录')
+      }
+
+      const date = new Date(timestamp)
+      const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+
+      const data = {
+        type: type === 'upscale' ? 'enhance-upscale' : 'enhance-animate',
+        inputImage: this.data.enhanceImageUrl,
+        outputFileID: uploadResult.fileID,
+        outputURL: uploadResult.tempFileURL || uploadResult.fileID,
+        outputType: type,
+        createTime: db.serverDate(),
+        date: dateStr,
+        timestamp: timestamp,
+        userInfo: {
+          nickName: userInfo.nickName,
+          avatarUrl: userInfo.avatarUrl
+        },
+        viewCount: 0,
+        likeCount: 0
+      }
+
+      if (videoId) {
+        data.videoId = videoId
+      }
+
+      console.log('[让照片变清晰] 保存数据:', data)
+
+      const collectionName = type === 'upscale' ? 'images' : 'videos'
+      await db.collection(collectionName).add({
+        data: data
+      })
+
+      console.log('[让照片变清晰] 保存成功')
+
+    } catch (error) {
+      console.error('[让照片变清晰] 保存失败:', error)
       throw error
     }
   }
