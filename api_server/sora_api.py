@@ -13,6 +13,65 @@ from PIL import Image
 # 加载环境变量
 load_dotenv()
 
+# 违禁词列表
+BANNED_WORDS = [
+    # 色情类
+    'porn', 'sex', 'nude', 'naked', 'naked body', 'breast', 'breasts',
+    '性感', '裸体', '色情', '成人', '淫秽', '露骨',
+
+    # 暴力类
+    'kill', 'murder', 'blood', 'gore', 'violence', 'death', 'dead',
+    'torture', 'cruel', 'brutal', 'massacre', 'slaughter',
+    '杀人', '谋杀', '血腥', '暴力', '死亡', '屠杀', '酷刑',
+
+    # 恐怖类
+    'horror', 'scary', 'terrifying', 'frightening', 'creepy',
+    '恐怖', '可怕', '惊悚',
+
+    # 政治类
+    'politics', 'political', 'government', 'protest', 'riot',
+    '政治', '政府', '抗议', '暴动',
+
+    # 仇恨言论类
+    'hate', 'racist', 'discrimination', 'racism', 'nazi', 'terrorist',
+    '仇恨', '种族歧视', '歧视', '纳粹', '恐怖分子',
+
+    # 违法类
+    'drug', 'illegal', 'crime', 'steal', 'robbery', 'fraud',
+    '毒品', '违法', '犯罪', '偷窃', '抢劫', '诈骗',
+
+    # 其他不当内容
+    'self-harm', 'suicide', 'abuse', 'harassment',
+    '自残', '自杀', '虐待', '骚扰'
+]
+
+def contains_banned_words(text):
+    """检查文本是否包含违禁词"""
+    if not text:
+        return False
+
+    text_lower = text.lower()
+    found_words = []
+
+    for word in BANNED_WORDS:
+        if word.lower() in text_lower:
+            found_words.append(word)
+
+    if found_words:
+        print(f"[违禁词检测] 发现违禁词: {', '.join(found_words)}")
+        return True, found_words
+
+    return False, []
+
+def validate_prompt(prompt):
+    """验证prompt是否合法"""
+    is_banned, found_words = contains_banned_words(prompt)
+
+    if is_banned:
+        return False, f"内容包含违禁词汇，请修改提示词后重试"
+
+    return True, None
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -217,7 +276,16 @@ def optimize_prompt():
                 'success': False,
                 'error': '缺少必要参数'
             }), 400
-        
+
+        # 检查违禁词
+        is_valid, error_msg = validate_prompt(user_description)
+        if not is_valid:
+            print(f"[GPT优化][违禁词] {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 400
+
         # 构建GPT优化提示
         system_prompt = """You are a professional video script optimizer specialized in creating viral TikTok-style short videos. 
 Your task is to combine user's video description with a specific style template to generate an optimized, detailed video prompt for AI video generation.
@@ -303,6 +371,15 @@ def generate_video():
             return jsonify({
                 'success': False,
                 'error': '请输入视频描述'
+            }), 400
+
+        # 检查违禁词
+        is_valid, error_msg = validate_prompt(prompt)
+        if not is_valid:
+            print(f"[违禁词] {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
             }), 400
 
         print("[开始] 开始调用Sora API...")
@@ -566,6 +643,15 @@ def generate_image():
             return jsonify({
                 'success': False,
                 'error': '请输入图片描述'
+            }), 400
+
+        # 检查违禁词
+        is_valid, error_msg = validate_prompt(prompt)
+        if not is_valid:
+            print(f"[违禁词] {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
             }), 400
 
         # 根据方向设置尺寸
