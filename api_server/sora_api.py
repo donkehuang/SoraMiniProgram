@@ -1055,6 +1055,9 @@ def generate_smile_video():
         smile_prompt = "A person in the same pose and setting, with a warm, natural smile. The expression should be friendly and happy, maintaining the original image's style, lighting, and composition."
 
         try:
+            print(f"[DALL-E] 开始编辑图片...")
+            print(f"[DALL-E] prompt: {smile_prompt}")
+
             response = client.images.edit(
                 image=base64.b64decode(img_b64),
                 prompt=smile_prompt,
@@ -1078,6 +1081,8 @@ def generate_smile_video():
             with open(smile_filepath, 'wb') as f:
                 f.write(smile_image_bytes)
 
+            print(f"[保存] 开口笑图片已保存: {smile_filepath}")
+
             # 裁剪为目标尺寸
             final_filename = f"smile_video_final_{timestamp}.png"
             final_path = os.path.join(IMAGES_DIR, final_filename)
@@ -1094,6 +1099,9 @@ def generate_smile_video():
 
         except Exception as e:
             print(f"[错误] DALL-E生成失败: {e}")
+            print(f"[回退] DALL-E不可用，使用原始裁剪图片")
+            import traceback
+            traceback.print_exc()
             # 如果DALL-E失败，使用原始裁剪图片
             final_path = cropped_path
             final_filename = cropped_filename
@@ -1119,6 +1127,7 @@ def generate_smile_video():
             # 创建视频生成任务
             print(f"[Sora] 正在创建视频任务...")
             print(f"[Sora] prompt: {video_prompt[:100]}...")
+            print(f"[Sora] 图片路径: {final_path}")
             print(f"[Sora] size: {size}")
             print(f"[Sora] duration: {seconds}s")
 
@@ -1135,9 +1144,14 @@ def generate_smile_video():
             use_sora = True
 
             try:
+                # 读取图片文件
+                with open(final_path, 'rb') as image_file:
+                    image_data = image_file.read()
+
                 video_response = client.videos.create(
                     model="sora-1.0-turbo",
                     prompt=video_prompt,
+                    image=image_data,  # 添加图片参数
                     duration=f"{seconds}s",
                     aspect_ratio=aspect_ratio,
                     resolution=resolution,
