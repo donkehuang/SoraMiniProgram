@@ -129,9 +129,9 @@ Page({
     backgroundVideoUrl: '',
     showBackgroundVideo: false,
 
-    // 开口笑功能卡片背景视频
-    smileBackgroundVideoUrl: '',
-    backgroundVideoLoading: true
+    // 开口笑功能卡片背景视频 - 使用固定视频
+    smileBackgroundVideoUrl: 'https://636c-cloud1-2gd0041e12763b47-1401157928.tcb.qcloud.la/background/background.mp4',
+    backgroundVideoLoading: false
   },
 
   onLoad() {
@@ -142,9 +142,6 @@ Page({
 
     // 动态获取背景视频URL
     this.loadBackgroundVideo()
-
-    // 加载开口笑功能卡片背景视频
-    this.loadSmileBackgroundVideo()
 
     // 初始化录音管理器
     this.initRecorder()
@@ -212,172 +209,6 @@ Page({
       showBackgroundVideo: false,
       backgroundVideoLoading: false
     })
-  },
-
-  // 加载开口笑功能卡片背景视频
-  async loadSmileBackgroundVideo() {
-    console.log('[开口笑背景] 开始生成背景视频...')
-    const { apiBaseUrl } = this.data
-
-    try {
-      // 使用预设的美女微笑图片
-      const smileImageUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&q=90'
-
-      // 先下载图片到本地
-      console.log('[开口笑背景] 下载图片到本地...')
-      const imageRes = await new Promise((resolve, reject) => {
-        wx.downloadFile({
-          url: smileImageUrl,
-          timeout: 30000,
-          success: (res) => {
-            if (res.statusCode === 200) {
-              console.log('[开口笑背景] 图片下载成功:', res.tempFilePath)
-              resolve(res)
-            } else {
-              reject(new Error(`图片下载失败,状态码: ${res.statusCode}`))
-            }
-          },
-          fail: (err) => {
-            reject(new Error(`图片下载失败: ${err.errMsg}`))
-          }
-        })
-      })
-
-      const localImagePath = imageRes.tempFilePath
-
-      // 上传图片到云存储
-      console.log('[开口笑背景] 上传图片到云存储...')
-      const imageCloudPath = `smile_bg_input/${Date.now()}.png`
-      const imageUploadResult = await cloudStorage.uploadFile(localImagePath, imageCloudPath)
-      console.log('[开口笑背景] 图片上传成功:', imageUploadResult.fileID)
-
-      // 调用开口笑视频生成接口
-      const requestData = {
-        imageUrl: imageUploadResult.tempFileURL || imageUploadResult.fileID,
-        seconds: 4  // 4秒视频
-      }
-
-      console.log('[开口笑背景] 请求数据:', requestData)
-
-      const res = await new Promise((resolve, reject) => {
-        wx.request({
-          url: `${apiBaseUrl}/api/smile-video`,
-          method: 'POST',
-          data: requestData,
-          header: {
-            'content-type': 'application/json'
-          },
-          success: (response) => {
-            console.log('[开口笑背景] API响应:', response.data)
-            console.log('[开口笑背景] API状态码:', response.statusCode)
-            resolve(response)
-          },
-          fail: (err) => {
-            console.error('[开口笑背景] 请求失败:', err)
-            reject(new Error(`请求失败: ${err.errMsg}`))
-          }
-        })
-      })
-
-      if (!res.data || !res.data.success) {
-        console.error('[开口笑背景] API返回失败:', res.data)
-        throw new Error(res.data?.error || '生成失败')
-      }
-
-      const videoId = res.data.videoId
-      console.log('[开口笑背景] 任务创建成功, videoId:', videoId)
-
-      // 等待视频生成完成
-      const maxWaitAttempts = 30  // 最多等待90秒
-      const checkInterval = 3000  // 每3秒检查一次
-
-      let videoReady = false
-      for (let attempt = 1; attempt <= maxWaitAttempts; attempt++) {
-        console.log(`[开口笑背景] 第 ${attempt} 次检查视频状态...`)
-
-        try {
-          const checkRes = await new Promise((resolve, reject) => {
-            wx.request({
-              url: `${apiBaseUrl}/videos/${videoId}.mp4`,
-              method: 'HEAD',
-              timeout: 5000,
-              success: (response) => {
-                resolve(response)
-              },
-              fail: (err) => {
-                console.error('[开口笑背景] HEAD请求失败:', err)
-                resolve({ statusCode: 404 })
-              }
-            })
-          })
-
-          if (checkRes.statusCode === 200) {
-            console.log('[开口笑背景] ✅ 视频生成完成')
-            videoReady = true
-            break
-          }
-
-          console.log(`[开口笑背景] 视频未就绪, 等待 ${checkInterval/1000} 秒...`)
-          await new Promise(resolve => setTimeout(resolve, checkInterval))
-
-        } catch (error) {
-          console.error(`[开口笑背景] 第 ${attempt} 次检查出错:`, error)
-          if (attempt < maxWaitAttempts) {
-            await new Promise(resolve => setTimeout(resolve, checkInterval))
-          }
-        }
-      }
-
-      if (!videoReady) {
-        console.warn('[开口笑背景] 视频生成超时,使用默认云存储视频')
-        // 使用云存储中的默认视频
-        this.setData({
-          smileBackgroundVideoUrl: 'https://636c-cloud1-2gd0041e12763b47-1401157928.tcb.qcloud.la/background/background.mp4'
-        })
-        return
-      }
-
-      // 下载生成的视频
-      console.log('[开口笑背景] 开始下载视频...')
-      const downloadRes = await new Promise((resolve, reject) => {
-        wx.downloadFile({
-          url: `${apiBaseUrl}/videos/${videoId}.mp4`,
-          timeout: 60000,
-          success: (response) => {
-            if (response.statusCode === 200) {
-              console.log('[开口笑背景] 下载成功:', response.tempFilePath)
-              resolve(response)
-            } else {
-              reject(new Error(`下载失败,状态码: ${response.statusCode}`))
-            }
-          },
-          fail: (err) => {
-            reject(new Error(`下载失败: ${err.errMsg}`))
-          }
-        })
-      })
-
-      const localPath = downloadRes.tempFilePath
-      console.log('[开口笑背景] 视频下载完成:', localPath)
-
-      // 上传到云存储
-      console.log('[开口笑背景] 上传视频到云存储...')
-      const cloudPath = `smile_background/${Date.now()}.mp4`
-      const uploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
-      console.log('[开口笑背景] 上传成功:', uploadResult.fileID)
-
-      // 设置背景视频URL
-      this.setData({
-        smileBackgroundVideoUrl: uploadResult.tempFileURL || uploadResult.fileID
-      })
-
-      console.log('[开口笑背景] 背景视频设置成功:', this.data.smileBackgroundVideoUrl)
-
-    } catch (error) {
-      console.error('[开口笑背景] 加载失败:', error)
-      console.warn('[开口笑背景] 使用默认静态背景')
-      // 静默失败,不影响页面使用
-    }
   },
 
   onPromptInput(e) {
@@ -1929,16 +1760,28 @@ Page({
 
         await this.saveSmileResultToDatabase(outputUploadResult, timestamp, 'image')
 
-        this.setData({
-          isGenerating: false,
-          imageUrl: outputUploadResult.tempFileURL || outputUploadResult.fileID,
-          generationProgress: 100,
-          statusText: '生成完成！'
+        // 跳转到图片结果页面
+        const imageResultUrl = outputUploadResult.tempFileURL || outputUploadResult.fileID
+        console.log('[开口笑] 跳转到结果页，图片URL:', imageResultUrl)
+
+        // 构建参数
+        const params = {
+          imageUrl: encodeURIComponent(imageResultUrl),
+          orientation: smileOrientation || 'vertical',
+          prompt: '让照片开口笑',
+          resolution: '高清'
+        }
+
+        // 跳转到结果页
+        wx.redirectTo({
+          url: `/pages/smile-result/smile-result?${Object.keys(params).map(key => `${key}=${params[key]}`).join('&')}`
         })
 
-        wx.showToast({
-          title: '已保存到作品',
-          icon: 'success'
+        // 清理状态
+        this.setData({
+          isGenerating: false,
+          generationProgress: 0,
+          statusText: ''
         })
       } else {
         // 视频生成：等待、下载、上传、保存

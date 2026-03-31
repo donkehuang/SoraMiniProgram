@@ -1,0 +1,114 @@
+<!-- 开口笑图片结果页面 -->
+<view class="smile-result-container">
+  <!-- 顶部状态栏 -->
+  <view class="status-header">
+    <view class="success-badge">
+      <text class="badge-icon">✨</text>
+      <text class="badge-text">图片生成成功</text>
+    </view>
+    <view class="meta-info">
+      <view class="meta-item">
+        <text class="meta-label">类型</text>
+        <text class="meta-value">开口笑图片</text>
+      </view>
+      <view class="meta-divider">|</view>
+      <view class="meta-item">
+        <text class="meta-label">大小</text>
+        <text class="meta-value">{{resolution || '高清'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 图片展示区域 -->
+  <view class="image-display">
+    <view class="image-wrapper" wx:if="{{imageUrl && !imageLoading}}">
+      <image
+        class="result-image"
+        src="{{imageUrl}}"
+        mode="aspectFit"
+        show-menu-by-longpress
+        bindload="onImageLoad"
+      />
+    </view>
+
+    <!-- 加载动画 -->
+    <view class="loading-container" wx:if="{{imageLoading}}">
+      <view class="spinner"></view>
+      <text class="loading-text">加载图片中...</text>
+    </view>
+  </view>
+
+  <!-- 图片信息卡片 -->
+  <view class="info-card" wx:if="{{imageUrl}}">
+    <view class="info-title">生成信息</view>
+    <view class="info-grid">
+      <view class="info-row">
+        <text class="info-label">提示词</text>
+        <text class="info-content">{{prompt || '让照片开口笑'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">方向</text>
+        <text class="info-content">{{orientation === 'vertical' ? '竖向 (9:16)' : '横向 (16:9)'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">生成时间</text>
+        <text class="info-content">{{generatedAt || '刚刚'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作按钮区域 -->
+  <view class="actions-container">
+    <view class="actions-grid">
+      <!-- 保存到相册 -->
+      <button class="action-btn primary" bindtap="saveToAlbum">
+        <text class="btn-icon">💾</text>
+        <text class="btn-text">保存相册</text>
+      </button>
+
+      <!-- 分享 -->
+      <button class="action-btn" open-type="share">
+        <text class="btn-icon">📤</text>
+        <text class="btn-text">分享</text>
+      </button>
+
+      <!-- 下载 -->
+      <button class="action-btn" bindtap="downloadImage">
+        <text class="btn-icon">⬇️</text>
+        <text class="btn-text">下载</text>
+      </button>
+
+      <!-- 重新生成 -->
+      <button class="action-btn secondary" bindtap="regenerate">
+        <text class="btn-icon">🔄</text>
+        <text class="btn-text">重新生成</text>
+      </button>
+    </view>
+  </view>
+
+  <!-- 底部导航 -->
+  <view class="bottom-nav">
+    <view class="nav-btn" bindtap="goBack">
+      <text class="nav-icon">←</text>
+      <text class="nav-text">返回</text>
+    </view>
+    <view class="nav-btn" bindtap="goHome">
+      <text class="nav-icon">🏠</text>
+      <text class="nav-text">首页</text>
+    </view>
+    <view class="nav-btn" bindtap="createNew">
+      <text class="nav-icon">➕</text>
+      <text class="nav-text">新建</text>
+    </view>
+  </view>
+
+  <!-- 小贴士 -->
+  <view class="tips-section">
+    <view class="tips-title">💡 小贴士</view>
+    <view class="tips-content">
+      <text class="tip-item">• 长按图片可以保存到本地</text>
+      <text class="tip-item">• 支持直接分享到微信好友和朋友圈</text>
+      <text class="tip-item">• 可以用不同照片生成更多有趣效果</text>
+    </view>
+  </view>
+</view>
