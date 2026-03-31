@@ -885,8 +885,8 @@ def generate_smile_image():
         import base64
         img_b64 = base64.b64encode(img_byte_arr).decode()
 
-        # 使用DALL-E 3编辑图片，添加微笑效果
-        smile_prompt = "A person in the same pose and setting, with a warm, natural smile. The expression should be friendly and happy, maintaining the original image's style, lighting, and composition. The person is smiling naturally with a gentle, pleasant expression that brightens their face while preserving their identity."
+        # 使用DALL-E 3编辑图片，添加明显的微笑效果
+        smile_prompt = "Edit this photo to make the person smile broadly and happily. The person should have a big, cheerful smile with teeth visible, showing joy and delight. Keep the same pose, setting, clothing, and overall composition, but transform the facial expression from serious/neutral to a big, natural, happy smile. The smile should be prominent and noticeable, with crinkled eyes showing genuine happiness. Maintain the original photo's lighting, style, and background perfectly."
 
         try:
             response = client.images.edit(
@@ -1051,8 +1051,8 @@ def generate_smile_video():
         import base64
         img_b64 = base64.b64encode(img_byte_arr).decode()
 
-        # 使用DALL-E 3编辑图片
-        smile_prompt = "A person in the same pose and setting, with a warm, natural smile. The expression should be friendly and happy, maintaining the original image's style, lighting, and composition."
+        # 使用DALL-E 3编辑图片，添加明显的微笑效果
+        smile_prompt = "Edit this photo to make the person smile broadly and happily. The person should have a big, cheerful smile with teeth visible, showing joy and delight. Keep the same pose, setting, clothing, and overall composition, but transform the facial expression from serious/neutral to a big, natural, happy smile. The smile should be prominent and noticeable, with crinkled eyes showing genuine happiness. Maintain the original photo's lighting, style, and background perfectly."
 
         try:
             print(f"[DALL-E] 开始编辑图片...")

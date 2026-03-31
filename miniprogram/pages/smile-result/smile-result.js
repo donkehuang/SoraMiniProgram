@@ -45,8 +45,10 @@ Page({
                 prompt,
                 orientation,
                 resolution,
-                generatedAt: this.formatTime(new Date())
+                generatedAt: this.formatTime(new Date()),
+                imageLoading: false  // 关键：获取到URL后，设置imageLoading为false，等待图片的bindload事件
               })
+              console.log('[开口笑结果页] setData后数据检查 - imageUrl:', tempUrl, 'imageLoading: false')
             } else {
               console.error('[开口笑结果页] 临时URL获取失败：返回数据为空')
               this.setData({
@@ -54,7 +56,8 @@ Page({
                 prompt,
                 orientation,
                 resolution,
-                generatedAt: this.formatTime(new Date())
+                generatedAt: this.formatTime(new Date()),
+                imageLoading: false  // 即使失败也设为false，避免一直显示加载
               })
             }
           },
@@ -66,7 +69,8 @@ Page({
               prompt,
               orientation,
               resolution,
-              generatedAt: this.formatTime(new Date())
+              generatedAt: this.formatTime(new Date()),
+              imageLoading: false
             })
           }
         })
@@ -77,7 +81,8 @@ Page({
           prompt,
           orientation,
           resolution,
-          generatedAt: this.formatTime(new Date())
+          generatedAt: this.formatTime(new Date()),
+          imageLoading: false
         })
       }
     } else {
@@ -88,7 +93,8 @@ Page({
         prompt,
         orientation,
         resolution,
-        generatedAt: this.formatTime(new Date())
+        generatedAt: this.formatTime(new Date()),
+        imageLoading: false
       })
     }
 
