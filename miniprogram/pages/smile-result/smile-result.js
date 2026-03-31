@@ -19,18 +19,64 @@ Page({
     console.log('[开口笑结果页] 加载参数:', options)
 
     // 解析参数
-    const imageUrl = options.imageUrl ? decodeURIComponent(options.imageUrl) : ''
+    let imageUrl = options.imageUrl ? decodeURIComponent(options.imageUrl) : ''
     const prompt = options.prompt ? decodeURIComponent(options.prompt) : ''
     const orientation = options.orientation || 'vertical'
     const resolution = options.resolution || '高清'
 
-    this.setData({
-      imageUrl,
-      prompt,
-      orientation,
-      resolution,
-      generatedAt: this.formatTime(new Date())
-    })
+    // 检查是否已经是临时URL（避免重复转换）
+    const isTempUrl = imageUrl.includes('http://tmp') || imageUrl.includes('https://tmp')
+
+    // 如果是云存储路径且不是临时URL，需要获取临时URL
+    if (!isTempUrl && (imageUrl.includes('cloud://') || imageUrl.includes('tcb.qcloud.la'))) {
+      console.log('[开口笑结果页] 检测到云存储URL，尝试获取临时URL')
+
+      if (wx.cloud) {
+        wx.cloud.getTempFileURL({
+          fileList: [imageUrl],
+          success: (res) => {
+            console.log('[开口笑结果页] 临时URL获取成功:', res.fileList[0].tempFileURL)
+            this.setData({
+              imageUrl: res.fileList[0].tempFileURL,
+              prompt,
+              orientation,
+              resolution,
+              generatedAt: this.formatTime(new Date())
+            })
+          },
+          fail: (err) => {
+            console.error('[开口笑结果页] 临时URL获取失败:', err)
+            // 失败时使用原始URL
+            this.setData({
+              imageUrl,
+              prompt,
+              orientation,
+              resolution,
+              generatedAt: this.formatTime(new Date())
+            })
+          }
+        })
+      } else {
+        console.warn('[开口笑结果页] 云开发未初始化，使用原始URL')
+        this.setData({
+          imageUrl,
+          prompt,
+          orientation,
+          resolution,
+          generatedAt: this.formatTime(new Date())
+        })
+      }
+    } else {
+      // 普通URL或临时URL直接使用
+      console.log('[开口笑结果页] 使用URL:', imageUrl, '(临时URL:', isTempUrl ? '是' : '否', ')')
+      this.setData({
+        imageUrl,
+        prompt,
+        orientation,
+        resolution,
+        generatedAt: this.formatTime(new Date())
+      })
+    }
 
     console.log('[开口笑结果页] 页面数据:', this.data)
   },
@@ -50,9 +96,26 @@ Page({
    */
   onImageError(e) {
     console.error('[开口笑结果页] 图片加载失败:', e.detail)
-    wx.showToast({
+    console.error('[开口笑结果页] 图片URL:', this.data.imageUrl)
+    wx.showModal({
       title: '图片加载失败',
-      icon: 'none'
+      content: '无法加载生成的图片，可能是网络问题或云存储权限问题。请重试或重新生成。',
+      confirmText: '重新加载',
+      cancelText: '返回',
+      success: (res) => {
+        if (res.confirm) {
+          // 重新加载页面
+          this.onLoad({
+            imageUrl: encodeURIComponent(this.data.imageUrl),
+            prompt: this.data.prompt,
+            orientation: this.data.orientation,
+            resolution: this.data.resolution
+          })
+        } else {
+          // 返回上一页
+          wx.navigateBack()
+        }
+      }
     })
     this.setData({
       imageLoading: false
