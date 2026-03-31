@@ -389,25 +389,14 @@ def generate_video():
         last_exc = None
         for attempt in range(1, 4):
             try:
-                # 如果提供了参考图片，使用它作为第一帧
-                if image_url:
-                    print("[创建] 使用参考图片作为第一帧...")
-                    # 尝试使用 image 参数（需要完整URL）
-                    full_image_url = image_url if image_url.startswith('http') else f"{request.host_url.rstrip('/')}{image_url}"
-                    video = client.videos.create(
-                        prompt=prompt,
-                        model="sora-2",
-                        seconds=seconds,
-                        size=size,
-                        image=full_image_url  # 使用参考图片
-                    )
-                else:
-                    video = client.videos.create(
-                        prompt=prompt,
-                        model="sora-2",
-                        seconds=seconds,
-                        size=size
-                    )
+                # Sora API目前不支持image参数，仅使用prompt生成视频
+                print("[创建] 创建视频任务...")
+                video = client.videos.create(
+                    prompt=prompt,
+                    model="sora-2",
+                    seconds=seconds,
+                    size=size
+                )
                 print(f"[创建] 视频任务创建成功，视频ID: {video.id}")
                 break
             except Exception as e:
@@ -1214,10 +1203,10 @@ def generate_smile_video():
                 image_url = f"{base_url}/videos/{final_filename}"
                 print(f"[Sora] 图片URL: {image_url}")
 
+                # Sora API目前不支持image参数，仅使用prompt生成
                 video_response = client.videos.create(
                     model="sora-1.0-turbo",
                     prompt=video_prompt,
-                    image=image_url,  # 使用URL而不是字节数据
                     duration=f"{seconds}s",
                     aspect_ratio=aspect_ratio,
                     resolution=resolution,
