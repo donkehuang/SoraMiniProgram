@@ -28,6 +28,7 @@
         mode="aspectFit"
         show-menu-by-longpress
         bindload="onImageLoad"
+        binderror="onImageError"
       />
     </view>
 

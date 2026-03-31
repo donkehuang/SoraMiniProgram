@@ -1762,7 +1762,8 @@ Page({
         await this.saveSmileResultToDatabase(outputUploadResult, timestamp, 'image')
 
         // 跳转到图片结果页面
-        const imageResultUrl = outputUploadResult.tempFileURL || outputUploadResult.fileID
+        // 使用fileID而不是tempFileURL，因为tempFileURL可能很快过期
+        const imageResultUrl = outputUploadResult.fileID
         console.log('[开口笑] 跳转到结果页，图片URL:', imageResultUrl)
 
         // 构建参数

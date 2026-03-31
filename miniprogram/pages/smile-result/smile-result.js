@@ -24,6 +24,8 @@ Page({
     const orientation = options.orientation || 'vertical'
     const resolution = options.resolution || '高清'
 
+    console.log('[开口笑结果页] 原始图片URL:', imageUrl)
+
     // 检查是否已经是临时URL（避免重复转换）
     const isTempUrl = imageUrl.includes('http://tmp') || imageUrl.includes('https://tmp')
 
@@ -35,14 +37,26 @@ Page({
         wx.cloud.getTempFileURL({
           fileList: [imageUrl],
           success: (res) => {
-            console.log('[开口笑结果页] 临时URL获取成功:', res.fileList[0].tempFileURL)
-            this.setData({
-              imageUrl: res.fileList[0].tempFileURL,
-              prompt,
-              orientation,
-              resolution,
-              generatedAt: this.formatTime(new Date())
-            })
+            if (res.fileList && res.fileList.length > 0) {
+              const tempUrl = res.fileList[0].tempFileURL
+              console.log('[开口笑结果页] 临时URL获取成功:', tempUrl)
+              this.setData({
+                imageUrl: tempUrl,
+                prompt,
+                orientation,
+                resolution,
+                generatedAt: this.formatTime(new Date())
+              })
+            } else {
+              console.error('[开口笑结果页] 临时URL获取失败：返回数据为空')
+              this.setData({
+                imageUrl,
+                prompt,
+                orientation,
+                resolution,
+                generatedAt: this.formatTime(new Date())
+              })
+            }
           },
           fail: (err) => {
             console.error('[开口笑结果页] 临时URL获取失败:', err)
@@ -97,28 +111,31 @@ Page({
   onImageError(e) {
     console.error('[开口笑结果页] 图片加载失败:', e.detail)
     console.error('[开口笑结果页] 图片URL:', this.data.imageUrl)
+    console.error('[开口笑结果页] 错误类型:', e.detail.errMsg)
+    console.error('[开口笑结果页] 当前状态:', this.data)
+
+    // 停止加载动画
+    this.setData({
+      imageLoading: false
+    })
+
+    // 显示错误提示
     wx.showModal({
       title: '图片加载失败',
-      content: '无法加载生成的图片，可能是网络问题或云存储权限问题。请重试或重新生成。',
-      confirmText: '重新加载',
+      content: '无法加载生成的图片。\n\n可能原因：\n1. 图片URL已过期（云存储临时URL有效期为2小时）\n2. 网络连接问题\n3. 云存储权限问题',
+      confirmText: '重新生成',
       cancelText: '返回',
       success: (res) => {
         if (res.confirm) {
-          // 重新加载页面
-          this.onLoad({
-            imageUrl: encodeURIComponent(this.data.imageUrl),
-            prompt: this.data.prompt,
-            orientation: this.data.orientation,
-            resolution: this.data.resolution
-          })
+          // 返回重新生成
+          console.log('[开口笑结果页] 用户选择重新生成')
+          wx.navigateBack()
         } else {
           // 返回上一页
+          console.log('[开口笑结果页] 用户选择返回')
           wx.navigateBack()
         }
       }
-    })
-    this.setData({
-      imageLoading: false
     })
   },
 
