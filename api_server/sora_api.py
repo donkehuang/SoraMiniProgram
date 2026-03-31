@@ -1162,58 +1162,36 @@ def generate_smile_video():
 
             except Exception as api_error:
                 print(f"[Sora] ❌ API调用失败: {api_error}")
-                print(f"[回退] Sora不可用，使用本地视频回退方案")
-                use_sora = False
+                print(f"[错误] 详细失败原因:")
+                print(f"[错误] - API异常类型: {type(api_error).__name__}")
+                print(f"[错误] - API异常信息: {str(api_error)}")
+                print(f"[错误] - 提示词: {video_prompt[:100]}...")
+                print(f"[错误] - 图片路径: {final_path}")
+                print(f"[错误] - 视频尺寸: {size}")
+                print(f"[错误] - 视频时长: {seconds}秒")
+                print(f"[错误] - 纵横比: {aspect_ratio}")
+                print(f"[错误] - 分辨率: {resolution}")
+                import traceback
+                print(f"[错误] 完整错误堆栈:")
+                traceback.print_exc()
+                # 清理任务
+                if video_id in video_tasks:
+                    del video_tasks[video_id]
+                # 直接返回错误，不使用回退
+                return jsonify({
+                    'success': False,
+                    'error': f'Sora视频生成失败: {str(api_error)}',
+                    'error_type': type(api_error).__name__,
+                    'details': {
+                        'prompt': video_prompt[:100] + '...',
+                        'size': size,
+                        'duration': f"{seconds}s",
+                        'aspect_ratio': aspect_ratio,
+                        'resolution': resolution
+                    }
+                }), 500
 
-            # 如果Sora不可用，使用本地已有视频作为回退
-            if not use_sora:
-                try:
-                    # 查找本地已有的视频文件
-                    import glob
-                    existing_videos = glob.glob(os.path.join(VIDEOS_DIR, "*.mp4"))
-
-                    if existing_videos:
-                        # 使用最新的视频文件
-                        latest_video = max(existing_videos, key=os.path.getmtime)
-                        local_filename = f"{video_id}.mp4"
-
-                        # 复制视频文件
-                        import shutil
-                        shutil.copy(latest_video, os.path.join(VIDEOS_DIR, local_filename))
-
-                        print(f"[回退] ✅ 使用本地视频: {latest_video}")
-                        print(f"[回退] ✅ 复制到: {local_filename}")
-
-                        # 直接标记为完成
-                        video_tasks[video_id] = {
-                            'status': 'completed',
-                            'progress': 100,
-                            'prompt': video_prompt,
-                            'size': size,
-                            'seconds': seconds,
-                            'imageUrl': frame_url,
-                            'local_path': os.path.join(VIDEOS_DIR, local_filename),
-                            'fallback': True,
-                            'source_video': latest_video
-                        }
-
-                        response_data = {
-                            'success': True,
-                            'videoId': video_id,
-                            'status': 'completed',
-                            'imageUrl': frame_url,
-                            'message': '使用本地视频（Sora不可用）'
-                        }
-
-                        return jsonify(response_data), 200
-                    else:
-                        raise Exception("本地没有可用的视频文件")
-
-                except Exception as fallback_error:
-                    print(f"[回退] ❌ 回退失败: {fallback_error}")
-                    raise Exception(f"Sora不可用且回退失败: {str(fallback_error)}")
-
-            # 创建本地任务记录（只有Sora可用时）
+            # 创建本地任务记录
             local_filename = f"{video_id}.mp4"
             video_tasks[video_id] = {
                 'status': 'in_progress',
@@ -1227,13 +1205,7 @@ def generate_smile_video():
             }
 
             print(f"[任务] 视频任务已创建: {video_id}")
-
-            # 只有Sora可用时才进行异步处理
-            if not use_sora:
-                print(f"[错误] Sora不可用但未触发回退，这不应该发生")
-                raise Exception("Sora不可用")
-
-            print(f"[任务] 视频任务已创建: {video_id}")
+            print(f"[任务] Sora视频ID: {sora_video_id}")
 
             # 异步处理视频生成和下载
             import threading
