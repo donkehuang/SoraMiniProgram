@@ -885,16 +885,43 @@ def generate_smile_image():
         import base64
         img_b64 = base64.b64encode(img_byte_arr).decode()
 
-        # 使用DALL-E 3重新生成图片，让人物笑起来
-        # 使用generate而不是edit，因为它可以更彻底地改变表情
-        smile_prompt = "Generate a photo of the same person, same pose, same clothing, same background, same lighting. BUT the person MUST be SMILING HAPPILY with a big cheerful smile. The person should look joyful and delighted. The mouth should be smiling upward. Keep everything else exactly the same as the original image - the person's face structure, hair, eyes, pose, clothing, and background. ONLY change the facial expression from crying/sad to HAPPY SMILING."
-
+        # 使用GPT-4 Vision先分析图片，然后用DALL-E 3生成笑脸版本
         try:
+            print("[分析] 使用GPT-4 Vision分析图片...")
+            vision_response = client.chat.completions.create(
+                model="gpt-4-vision-preview",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Please describe this photo in detail. Include: the person's gender, age range, hair color and style, clothing type and color, pose, background setting, lighting conditions, and overall mood. Be very specific about the person's appearance so we can recreate them accurately."
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{img_b64}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=500
+            )
+
+            image_description = vision_response.choices[0].message.content
+            print(f"[分析] 图片描述: {image_description}")
+
+            # 根据描述生成笑脸版本
+            smile_prompt = f"Based on this detailed description: '{image_description}'. Generate a photo of this EXACT SAME person with ALL the same characteristics - same gender, same age, same hair color and style, same clothing type and color, same pose, same background setting, same lighting. The ONLY difference is the facial expression - instead of being sad or crying, the person must be SMILING HAPPILY with a big, genuine, cheerful smile showing joy. The smile should be natural and pleasant. Keep the entire image composition identical to the description, just change the emotion from sad to happy."
+
             response = client.images.generate(
                 prompt=smile_prompt,
                 n=1,
                 size="1024x1024",
-                model="dall-e-3"
+                model="dall-e-3",
+                quality="hd"
             )
 
             print(f"[成功] 开口笑图片生成成功")
@@ -1052,11 +1079,37 @@ def generate_smile_video():
         import base64
         img_b64 = base64.b64encode(img_byte_arr).decode()
 
-        # 使用DALL-E 3重新生成图片，让人物笑起来
-        # 使用generate而不是edit，因为它可以更彻底地改变表情
-        smile_prompt = "Generate a photo of the same person, same pose, same clothing, same background, same lighting. BUT the person MUST be SMILING HAPPILY with a big cheerful smile. The person should look joyful and delighted. The mouth should be smiling upward. Keep everything else exactly the same as the original image - the person's face structure, hair, eyes, pose, clothing, and background. ONLY change the facial expression from crying/sad to HAPPY SMILING."
-
+        # 使用GPT-4 Vision先分析图片，然后用DALL-E 3生成笑脸版本
         try:
+            print("[分析] 使用GPT-4 Vision分析图片...")
+            vision_response = client.chat.completions.create(
+                model="gpt-4-vision-preview",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Please describe this photo in detail. Include: the person's gender, age range, hair color and style, clothing type and color, pose, background setting, lighting conditions, and overall mood. Be very specific about the person's appearance so we can recreate them accurately."
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{img_b64}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=500
+            )
+
+            image_description = vision_response.choices[0].message.content
+            print(f"[分析] 图片描述: {image_description}")
+
+            # 根据描述生成笑脸版本
+            smile_prompt = f"Based on this detailed description: '{image_description}'. Generate a photo of this EXACT SAME person with ALL the same characteristics - same gender, same age, same hair color and style, same clothing type and color, same pose, same background setting, same lighting. The ONLY difference is the facial expression - instead of being sad or crying, the person must be SMILING HAPPILY with a big, genuine, cheerful smile showing joy. The smile should be natural and pleasant. Keep the entire image composition identical to the description, just change the emotion from sad to happy."
+
             print(f"[DALL-E] 开始生成图片...")
             print(f"[DALL-E] prompt: {smile_prompt}")
 
@@ -1064,7 +1117,8 @@ def generate_smile_video():
                 prompt=smile_prompt,
                 n=1,
                 size="1024x1024",
-                model="dall-e-3"
+                model="dall-e-3",
+                quality="hd"
             )
 
             print(f"[成功] 开口笑首帧生成成功")
