@@ -1144,14 +1144,24 @@ def generate_smile_video():
             use_sora = True
 
             try:
-                # 读取图片文件
-                with open(final_path, 'rb') as image_file:
-                    image_data = image_file.read()
+                # 构建图片URL（使用本地服务器的图片URL）
+                # Sora API需要可以访问的URL，这里使用服务器本地的图片路径
+                # 实际部署时需要确保图片可以通过外网访问
+                base_url = request.host_url.rstrip('/')
+
+                # 将图片复制到可访问的位置
+                import shutil
+                public_image_path = os.path.join(VIDEOS_DIR, final_filename)
+                shutil.copy(final_path, public_image_path)
+
+                # 构建可访问的URL
+                image_url = f"{base_url}/videos/{final_filename}"
+                print(f"[Sora] 图片URL: {image_url}")
 
                 video_response = client.videos.create(
                     model="sora-1.0-turbo",
                     prompt=video_prompt,
-                    image=image_data,  # 添加图片参数
+                    image=image_url,  # 使用URL而不是字节数据
                     duration=f"{seconds}s",
                     aspect_ratio=aspect_ratio,
                     resolution=resolution,
