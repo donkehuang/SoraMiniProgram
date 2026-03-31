@@ -249,21 +249,9 @@
           </view>
         </view>
 
-        <!-- 输出选项 -->
-        <view class="output-options">
-          <view class="option-item" bindtap="onOutputTypeChange" data-type="image">
-            <view class="option-radio {{smileOutputType === 'image' ? 'active' : ''}}"></view>
-            <text class="option-text">生成开口笑图片</text>
-          </view>
-          <view class="option-item" bindtap="onOutputTypeChange" data-type="video">
-            <view class="option-radio {{smileOutputType === 'video' ? 'active' : ''}}"></view>
-            <text class="option-text">生成开口笑视频（4秒）</text>
-          </view>
-        </view>
-
         <!-- 生成按钮 -->
         <button class="generate-btn" bindtap="generateSmile" disabled="{{!smileImageUrl}}">
-          {{smileOutputType === 'image' ? '生成开口笑图片' : '生成开口笑视频'}}
+          生成开口笑图片
         </button>
       </view>
     </view>

@@ -32,7 +32,6 @@ Page({
 
     // 开口笑相关
     smileImageUrl: '',  // 用户选择的图片
-    smileOutputType: 'video',  // 输出类型：'image' 或 'video'
 
     // 让照片变清晰相关
     enhanceImageUrl: '',  // 用户选择的图片
@@ -1673,16 +1672,8 @@ Page({
     })
   },
 
-  onOutputTypeChange(e) {
-    const type = e.currentTarget.dataset.type
-    console.log('[开口笑] 切换输出类型:', type)
-    this.setData({
-      smileOutputType: type
-    })
-  },
-
   async generateSmile() {
-    const { smileImageUrl, smileOutputType, apiBaseUrl } = this.data
+    const { smileImageUrl, apiBaseUrl } = this.data
 
     if (!smileImageUrl) {
       wx.showToast({
@@ -1723,19 +1714,13 @@ Page({
       // 第二步：调用API生成
       this.setData({
         generationProgress: 40,
-        statusText: smileOutputType === 'image' ? '正在生成开口笑图片...' : '正在生成开口笑视频...'
+        statusText: '正在生成开口笑图片...'
       })
 
-      const apiUrl = smileOutputType === 'image'
-        ? `${apiBaseUrl}/api/smile-image`
-        : `${apiBaseUrl}/api/smile-video`
+      const apiUrl = `${apiBaseUrl}/api/smile-image`
 
       const requestData = {
         imageUrl: uploadResult.tempFileURL || uploadResult.fileID
-      }
-
-      if (smileOutputType === 'video') {
-        requestData.seconds = 4  // 固定4秒
       }
 
       const requestPromise = new Promise((resolve, reject) => {
@@ -1765,7 +1750,7 @@ Page({
         throw new Error(res.data?.error || '生成失败')
       }
 
-      const resultUrl = res.data.imageUrl || res.data.videoUrl
+      const resultUrl = res.data.imageUrl
       const orientation = res.data.orientation || 'vertical'  // 从API响应中获取方向
       console.log('[开口笑] 生成成功:', resultUrl, '方向:', orientation)
 
@@ -1804,64 +1789,6 @@ Page({
         // 跳转到结果页
         wx.redirectTo({
           url: `/pages/smile-result/smile-result?${Object.keys(params).map(key => `${key}=${params[key]}`).join('&')}`
-        })
-
-        // 清理状态
-        this.setData({
-          isGenerating: false,
-          generationProgress: 0,
-          statusText: ''
-        })
-      } else {
-        // 视频生成：等待、下载、上传、保存
-        this.setData({
-          generationProgress: 60,
-          statusText: '等待视频生成...'
-        })
-
-        const videoId = res.data.videoId || 'smile_' + timestamp
-
-        // 等待视频就绪
-        await this.waitForVideoReady(videoId, apiBaseUrl)
-
-        this.setData({
-          generationProgress: 70,
-          statusText: '正在下载视频...'
-        })
-
-        const localPath = await this.downloadVideoWithRetry(videoId, apiBaseUrl, 3)
-
-        this.setData({
-          generationProgress: 85,
-          statusText: '正在上传到云存储...'
-        })
-
-        const outputCloudPath = `smile_videos/${timestamp}.mp4`
-        const outputUploadResult = await cloudStorage.uploadFile(localPath, outputCloudPath)
-
-        this.setData({
-          generationProgress: 95,
-          statusText: '正在保存到作品...'
-        })
-
-        await this.saveSmileResultToDatabase(outputUploadResult, timestamp, 'video', videoId)
-
-        // 跳转到视频结果页面
-        const videoResultUrl = outputUploadResult.tempFileURL || outputUploadResult.fileID
-        console.log('[开口笑] 跳转到结果页，视频URL:', videoResultUrl)
-
-        // 构建参数
-        const params = {
-          videoUrl: encodeURIComponent(videoResultUrl),
-          duration: 4,
-          orientation: orientation,
-          prompt: '开口笑视频',
-          style: '微笑特效'
-        }
-
-        // 跳转到结果页
-        wx.redirectTo({
-          url: `/pages/result/result?${Object.keys(params).map(key => `${key}=${params[key]}`).join('&')}`
         })
 
         // 清理状态
