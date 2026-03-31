@@ -886,7 +886,7 @@ def generate_smile_image():
         img_b64 = base64.b64encode(img_byte_arr).decode()
 
         # 使用DALL-E 3编辑图片，添加明显的微笑效果
-        smile_prompt = "Edit this photo to make the person smile broadly and happily. The person should have a big, cheerful smile with teeth visible, showing joy and delight. Keep the same pose, setting, clothing, and overall composition, but transform the facial expression from serious/neutral to a big, natural, happy smile. The smile should be prominent and noticeable, with crinkled eyes showing genuine happiness. Maintain the original photo's lighting, style, and background perfectly."
+        smile_prompt = "Change the person's face to make them SMILE. The person MUST have a happy smiling face with an upturned mouth. The facial expression should show happiness and joy with a visible smile. Keep the entire image identical - same face structure, same eyes, same hair, same pose, same clothing, same background, same lighting. ONLY change the mouth and facial expression to make the person smile HAPPILY. The smile should be CLEAR and OBVIOUS. Do not change anything else. Just make them smile."
 
         try:
             response = client.images.edit(
@@ -1052,7 +1052,7 @@ def generate_smile_video():
         img_b64 = base64.b64encode(img_byte_arr).decode()
 
         # 使用DALL-E 3编辑图片，添加明显的微笑效果
-        smile_prompt = "Edit this photo to make the person smile broadly and happily. The person should have a big, cheerful smile with teeth visible, showing joy and delight. Keep the same pose, setting, clothing, and overall composition, but transform the facial expression from serious/neutral to a big, natural, happy smile. The smile should be prominent and noticeable, with crinkled eyes showing genuine happiness. Maintain the original photo's lighting, style, and background perfectly."
+        smile_prompt = "Change the person's face to make them SMILE. The person MUST have a happy smiling face with an upturned mouth. The facial expression should show happiness and joy with a visible smile. Keep the entire image identical - same face structure, same eyes, same hair, same pose, same clothing, same background, same lighting. ONLY change the mouth and facial expression to make the person smile HAPPILY. The smile should be CLEAR and OBVIOUS. Do not change anything else. Just make them smile."
 
         try:
             print(f"[DALL-E] 开始编辑图片...")
