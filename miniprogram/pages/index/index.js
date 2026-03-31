@@ -343,6 +343,35 @@ Page({
     })
   },
 
+  // ========== 通用功能 ==========
+
+  /**
+   * 检查登录状态
+   * @returns {Promise<boolean>} 返回是否已登录
+   */
+  async checkLoginState() {
+    const userInfo = wx.getStorageSync('userInfo')
+    if (!userInfo || !userInfo.nickName) {
+      return new Promise((resolve) => {
+        wx.showModal({
+          title: '需要登录',
+          content: '请先登录后再使用此功能',
+          confirmText: '去登录',
+          cancelText: '取消',
+          success: (res) => {
+            if (res.confirm) {
+              wx.switchTab({
+                url: '/pages/profile/profile'
+              })
+            }
+            resolve(false)
+          }
+        })
+      })
+    }
+    return true
+  },
+
   // ========== 生图功能 ==========
   async generateImage() {
     const { imagePrompt, imageOrientationIndex, imageOrientationOptions, apiBaseUrl } = this.data
@@ -353,6 +382,12 @@ Page({
         icon: 'none',
         duration: 2000
       })
+      return
+    }
+
+    // 检查登录状态
+    const isLoggedIn = await this.checkLoginState()
+    if (!isLoggedIn) {
       return
     }
 
@@ -892,22 +927,8 @@ Page({
     }
 
     // 检查登录状态
-    const userInfo = wx.getStorageSync('userInfo')
-    if (!userInfo || !userInfo.nickName) {
-      wx.showModal({
-        title: '需要登录',
-        content: '请先登录后再生成视频，以便保存您的作品',
-        confirmText: '去登录',
-        cancelText: '取消',
-        success: (res) => {
-          if (res.confirm) {
-            // 跳转到"我的"页面登录
-            wx.switchTab({
-              url: '/pages/profile/profile'
-            })
-          }
-        }
-      })
+    const isLoggedIn = await this.checkLoginState()
+    if (!isLoggedIn) {
       return
     }
 
@@ -1671,6 +1692,12 @@ Page({
       return
     }
 
+    // 检查登录状态
+    const isLoggedIn = await this.checkLoginState()
+    if (!isLoggedIn) {
+      return
+    }
+
     // 清除之前的错误信息
     this.setData({
       errorMessage: '',
@@ -1966,6 +1993,12 @@ Page({
         title: '请先选择照片',
         icon: 'none'
       })
+      return
+    }
+
+    // 检查登录状态
+    const isLoggedIn = await this.checkLoginState()
+    if (!isLoggedIn) {
       return
     }
 
@@ -2310,21 +2343,8 @@ Page({
     }
 
     // 检查登录状态
-    const userInfo = wx.getStorageSync('userInfo')
-    if (!userInfo || !userInfo.nickName) {
-      wx.showModal({
-        title: '需要登录',
-        content: '请先登录后再生成视频',
-        confirmText: '去登录',
-        cancelText: '取消',
-        success: (res) => {
-          if (res.confirm) {
-            wx.switchTab({
-              url: '/pages/profile/profile'
-            })
-          }
-        }
-      })
+    const isLoggedIn = await this.checkLoginState()
+    if (!isLoggedIn) {
       return
     }
 
@@ -2673,21 +2693,8 @@ Page({
     }
 
     // 检查登录状态
-    const userInfo = wx.getStorageSync('userInfo')
-    if (!userInfo || !userInfo.nickName) {
-      wx.showModal({
-        title: '需要登录',
-        content: '请先登录后再生成视频',
-        confirmText: '去登录',
-        cancelText: '取消',
-        success: (res) => {
-          if (res.confirm) {
-            wx.switchTab({
-              url: '/pages/profile/profile'
-            })
-          }
-        }
-      })
+    const isLoggedIn = await this.checkLoginState()
+    if (!isLoggedIn) {
       return
     }
 
@@ -3138,21 +3145,8 @@ Page({
     }
 
     // 检查登录状态
-    const userInfo = wx.getStorageSync('userInfo')
-    if (!userInfo || !userInfo.nickName) {
-      wx.showModal({
-        title: '需要登录',
-        content: '请先登录后再生成作品',
-        confirmText: '去登录',
-        cancelText: '取消',
-        success: (res) => {
-          if (res.confirm) {
-            wx.switchTab({
-              url: '/pages/profile/profile'
-            })
-          }
-        }
-      })
+    const isLoggedIn = await this.checkLoginState()
+    if (!isLoggedIn) {
       return
     }
 
