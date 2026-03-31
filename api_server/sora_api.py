@@ -885,15 +885,16 @@ def generate_smile_image():
         import base64
         img_b64 = base64.b64encode(img_byte_arr).decode()
 
-        # 使用DALL-E 3编辑图片，添加明显的微笑效果
-        smile_prompt = "Change the person's face to make them SMILE. The person MUST have a happy smiling face with an upturned mouth. The facial expression should show happiness and joy with a visible smile. Keep the entire image identical - same face structure, same eyes, same hair, same pose, same clothing, same background, same lighting. ONLY change the mouth and facial expression to make the person smile HAPPILY. The smile should be CLEAR and OBVIOUS. Do not change anything else. Just make them smile."
+        # 使用DALL-E 3重新生成图片，让人物笑起来
+        # 使用generate而不是edit，因为它可以更彻底地改变表情
+        smile_prompt = "Generate a photo of the same person, same pose, same clothing, same background, same lighting. BUT the person MUST be SMILING HAPPILY with a big cheerful smile. The person should look joyful and delighted. The mouth should be smiling upward. Keep everything else exactly the same as the original image - the person's face structure, hair, eyes, pose, clothing, and background. ONLY change the facial expression from crying/sad to HAPPY SMILING."
 
         try:
-            response = client.images.edit(
-                image=base64.b64decode(img_b64),
+            response = client.images.generate(
                 prompt=smile_prompt,
                 n=1,
-                size="1024x1024"
+                size="1024x1024",
+                model="dall-e-3"
             )
 
             print(f"[成功] 开口笑图片生成成功")
@@ -1051,18 +1052,19 @@ def generate_smile_video():
         import base64
         img_b64 = base64.b64encode(img_byte_arr).decode()
 
-        # 使用DALL-E 3编辑图片，添加明显的微笑效果
-        smile_prompt = "Change the person's face to make them SMILE. The person MUST have a happy smiling face with an upturned mouth. The facial expression should show happiness and joy with a visible smile. Keep the entire image identical - same face structure, same eyes, same hair, same pose, same clothing, same background, same lighting. ONLY change the mouth and facial expression to make the person smile HAPPILY. The smile should be CLEAR and OBVIOUS. Do not change anything else. Just make them smile."
+        # 使用DALL-E 3重新生成图片，让人物笑起来
+        # 使用generate而不是edit，因为它可以更彻底地改变表情
+        smile_prompt = "Generate a photo of the same person, same pose, same clothing, same background, same lighting. BUT the person MUST be SMILING HAPPILY with a big cheerful smile. The person should look joyful and delighted. The mouth should be smiling upward. Keep everything else exactly the same as the original image - the person's face structure, hair, eyes, pose, clothing, and background. ONLY change the facial expression from crying/sad to HAPPY SMILING."
 
         try:
-            print(f"[DALL-E] 开始编辑图片...")
+            print(f"[DALL-E] 开始生成图片...")
             print(f"[DALL-E] prompt: {smile_prompt}")
 
-            response = client.images.edit(
-                image=base64.b64decode(img_b64),
+            response = client.images.generate(
                 prompt=smile_prompt,
                 n=1,
-                size="1024x1024"
+                size="1024x1024",
+                model="dall-e-3"
             )
 
             print(f"[成功] 开口笑首帧生成成功")
