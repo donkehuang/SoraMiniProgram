@@ -1739,7 +1739,8 @@ Page({
       }
 
       const resultUrl = res.data.imageUrl || res.data.videoUrl
-      console.log('[开口笑] 生成成功:', resultUrl)
+      const orientation = res.data.orientation || 'vertical'  // 从API响应中获取方向
+      console.log('[开口笑] 生成成功:', resultUrl, '方向:', orientation)
 
       if (smileOutputType === 'image') {
         // 图片生成：下载、上传、保存
@@ -1767,7 +1768,7 @@ Page({
         // 构建参数
         const params = {
           imageUrl: encodeURIComponent(imageResultUrl),
-          orientation: smileOrientation || 'vertical',
+          orientation: orientation,
           prompt: '让照片开口笑',
           resolution: '高清'
         }
@@ -1825,7 +1826,7 @@ Page({
         const params = {
           videoUrl: encodeURIComponent(videoResultUrl),
           duration: 4,
-          orientation: smileOrientation || 'vertical',
+          orientation: orientation,
           prompt: '开口笑视频',
           style: '微笑特效'
         }
