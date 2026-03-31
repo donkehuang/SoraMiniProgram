@@ -6,7 +6,8 @@
     "pages/docs/docs",
     "pages/about/about",
     "pages/player/player",
-    "pages/test/test"
+    "pages/test/test",
+    "pages/result/result"
   ],
   "window": {
     "backgroundTextStyle": "light",

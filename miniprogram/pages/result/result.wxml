@@ -1,0 +1,147 @@
+<view class="result-container">
+  <!-- 顶部状态栏 -->
+  <view class="result-header">
+    <view class="status-badge">
+      <text class="badge-icon">✅</text>
+      <text class="badge-text">生成成功</text>
+    </view>
+    <view class="result-meta">
+      <text class="meta-item">📹 {{videoDuration || '8秒'}}</text>
+      <text class="meta-item" wx:if="{{orientation}}">
+        📐 {{orientation === 'vertical' ? '竖屏' : '横屏'}}
+      </text>
+      <text class="meta-item" wx:if="{{style}}">
+        🎨 {{style}}
+      </text>
+    </view>
+  </view>
+
+  <!-- 视频播放区域 -->
+  <view class="video-section">
+    <view class="video-wrapper">
+      <video
+        class="result-video"
+        src="{{videoUrl}}"
+        controls
+        autoplay
+        loop
+        objectFit="contain"
+        bindplay="onVideoPlay"
+        bindpause="onVideoPause"
+        binderror="onVideoError"
+        bindload="onVideoLoad"
+        bindtimeupdate="onVideoTimeUpdate"
+        show-center-play-btn="{{true}}"
+        show-play-btn="{{true}}"
+        show-fullscreen-btn="{{true}}"
+        enable-progress-gesture="{{true}}"
+      ></video>
+
+      <!-- 视频加载提示 -->
+      <view class="video-loading-overlay" wx:if="{{isLoading}}">
+        <view class="loading-spinner"></view>
+        <text class="loading-text">加载中...</text>
+      </view>
+    </view>
+
+    <!-- 播放控制按钮 -->
+    <view class="video-controls">
+      <button class="control-btn" bindtap="replayVideo" disabled="{{isLoading}}">
+        <text class="control-icon">🔄</text>
+        <text class="control-label">重播</text>
+      </button>
+      <button class="control-btn" bindtap="pauseVideo" wx:if="{{isPlaying}}" disabled="{{isLoading}}">
+        <text class="control-icon">⏸️</text>
+        <text class="control-label">暂停</text>
+      </button>
+      <button class="control-btn" bindtap="playVideo" wx:if="{{!isPlaying}}" disabled="{{isLoading}}">
+        <text class="control-icon">▶️</text>
+        <text class="control-label">播放</text>
+      </button>
+    </view>
+  </view>
+
+  <!-- 视频信息区域 -->
+  <view class="video-info-section">
+    <view class="info-card">
+      <view class="info-header">
+        <text class="info-title">📋 视频详情</text>
+      </view>
+      <view class="info-content">
+        <view class="info-row">
+          <text class="info-label">时长：</text>
+          <text class="info-value">{{videoDuration || '8秒'}}</text>
+        </view>
+        <view class="info-row" wx:if="{{orientation}}">
+          <text class="info-label">方向：</text>
+          <text class="info-value">{{orientation === 'vertical' ? '竖屏 (9:16)' : '横屏 (16:9)'}}</text>
+        </view>
+        <view class="info-row" wx:if="{{resolution}}">
+          <text class="info-label">分辨率：</text>
+          <text class="info-value">{{resolution}}</text>
+        </view>
+        <view class="info-row" wx:if="{{size}}">
+          <text class="info-label">尺寸：</text>
+          <text class="info-value">{{size}}</text>
+        </view>
+        <view class="info-row" wx:if="{{prompt}}">
+          <text class="info-label">提示词：</text>
+          <text class="info-value">{{prompt.length > 50 ? prompt.substring(0, 50) + '...' : prompt}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作按钮区域 -->
+  <view class="actions-section">
+    <view class="actions-grid">
+      <!-- 保存到相册 -->
+      <button class="action-btn primary" bindtap="saveVideoToGallery">
+        <text class="btn-icon">💾</text>
+        <text class="btn-label">保存到相册</text>
+      </button>
+
+      <!-- 分享 -->
+      <button class="action-btn" open-type="share">
+        <text class="btn-icon">📤</text>
+        <text class="btn-label">分享</text>
+      </button>
+
+      <!-- 下载到本地 -->
+      <button class="action-btn" bindtap="downloadVideo">
+        <text class="btn-icon">⬇️</text>
+        <text class="btn-label">下载</text>
+      </button>
+
+      <!-- 重新生成 -->
+      <button class="action-btn secondary" bindtap="regenerate">
+        <text class="btn-icon">🔄</text>
+        <text class="btn-label">重新生成</text>
+      </button>
+    </view>
+  </view>
+
+  <!-- 底部导航 -->
+  <view class="bottom-nav">
+    <button class="nav-btn" bindtap="goBack">
+      <text class="nav-icon">←</text>
+      <text class="nav-label">返回</text>
+    </button>
+    <button class="nav-btn" bindtap="goHome">
+      <text class="nav-icon">🏠</text>
+      <text class="nav-label">首页</text>
+    </button>
+    <button class="nav-btn" bindtap="generateNew">
+      <text class="nav-icon">➕</text>
+      <text class="nav-label">新建</text>
+    </button>
+  </view>
+
+  <!-- 提示信息 -->
+  <view class="tips-section">
+    <text class="tips-title">💡 小贴士</text>
+    <text class="tips-text">• 长按视频可保存到相册</text>
+    <text class="tips-text">• 建议在WiFi环境下保存大文件</text>
+    <text class="tips-text">• 保存后可分享到朋友圈</text>
+  </view>
+</view>

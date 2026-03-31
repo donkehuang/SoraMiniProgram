@@ -1974,25 +1974,30 @@ Page({
 
         await this.saveSmileResultToDatabase(outputUploadResult, timestamp, 'video', videoId)
 
+        // 跳转到视频结果页面
+        const videoResultUrl = outputUploadResult.tempFileURL || outputUploadResult.fileID
+        console.log('[开口笑] 跳转到结果页，视频URL:', videoResultUrl)
+
+        // 构建参数
+        const params = {
+          videoUrl: encodeURIComponent(videoResultUrl),
+          duration: 4,
+          orientation: smileOrientation || 'vertical',
+          prompt: '开口笑视频',
+          style: '微笑特效'
+        }
+
+        // 跳转到结果页
+        wx.redirectTo({
+          url: `/pages/result/result?${Object.keys(params).map(key => `${key}=${params[key]}`).join('&')}`
+        })
+
+        // 清理状态
         this.setData({
           isGenerating: false,
-          videoUrl: outputUploadResult.tempFileURL || outputUploadResult.fileID,
-          generationProgress: 100,
-          statusText: '生成完成！'
+          generationProgress: 0,
+          statusText: ''
         })
-
-        wx.showToast({
-          title: '已保存到作品',
-          icon: 'success'
-        })
-
-        // 延迟返回主界面
-        setTimeout(() => {
-          this.setData({
-            showSmileView: false,
-            smileImageUrl: ''
-          })
-        }, 2000)
       }
 
     } catch (error) {
