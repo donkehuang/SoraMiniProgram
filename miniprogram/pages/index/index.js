@@ -2647,6 +2647,8 @@ Page({
         statusText: '正在生成图片...'
       })
 
+      const timestamp = Date.now()
+
       // 构建生成图片的提示词
       const firstFramePrompt = `A cute pet (cat or dog) with a speech bubble containing Chinese text "${finalDialogue}", the pet is looking at the camera with a cute expression, warm and cozy lighting, high quality, realistic style`
 
