@@ -1612,6 +1612,30 @@ def davinci_style():
 
         print(f"[达芬奇] 图片大小: {len(image_data)} 字节")
 
+        # 检查图片大小,OpenAI限制最大4MB
+        if len(image_data) > 4 * 1024 * 1024:
+            print("[达芬奇] 图片过大,进行压缩...")
+            # 压缩图片
+            from io import BytesIO
+            from PIL import Image
+
+            img = Image.open(BytesIO(image_data))
+
+            # 转换为RGB模式(去除透明通道)
+            if img.mode in ('RGBA', 'LA', 'P'):
+                img = img.convert('RGB')
+
+            # 调整大小,确保不超过1024x1024
+            max_size = 1024
+            if img.size[0] > max_size or img.size[1] > max_size:
+                img.thumbnail((max_size, max_size), Image.LANCZOS)
+
+            # 保存为JPEG以减小体积
+            output = BytesIO()
+            img.save(output, format='JPEG', quality=85)
+            image_data = output.getvalue()
+            print(f"[达芬奇] 压缩后图片大小: {len(image_data)} 字节")
+
         # 调用OpenAI DALL-E编辑API
         print("[达芬奇] 开始调用OpenAI DALL-E编辑API...")
 
@@ -1675,11 +1699,21 @@ def davinci_style():
 
             error_message = str(api_error)
 
-            # 检查是否是透明图片错误
+            # 检查各种错误类型
             if "transparent" in error_message.lower() or "rgba" in error_message.lower():
                 return jsonify({
                     'success': False,
                     'error': '图片格式不支持，请使用不透明的JPG或PNG图片'
+                }), 400
+            elif "size" in error_message.lower() or "larger" in error_message.lower():
+                return jsonify({
+                    'success': False,
+                    'error': '图片尺寸不符合要求，请使用小于4MB的图片'
+                }), 400
+            elif "invalid_request_error" in error_message:
+                return jsonify({
+                    'success': False,
+                    'error': f'图片编辑请求失败: {error_message}'
                 }), 400
 
             return jsonify({
