@@ -118,6 +118,20 @@ client = OpenAI(
     base_url=base_url
 )
 
+# 初始化Kimi客户端 (用于Vision API)
+moonshot_api_key = os.getenv('MOONSHOT_API_KEY')
+kimi_client = None
+if moonshot_api_key:
+    kimi_client = OpenAI(
+        api_key=moonshot_api_key,
+        base_url="https://api.moonshot.cn/v1",
+        timeout=300.0,
+        max_retries=3
+    )
+    print(f"[配置] Kimi客户端已初始化")
+else:
+    print(f"[警告] 未设置 MOONSHOT_API_KEY，将使用OpenAI Vision API")
+
 print(f"[配置] OpenAI客户端已初始化")
 print(f"[配置] API基础URL: {client.base_url}")
 print(f"[配置] 超时时间: {client.timeout}秒")
@@ -1612,36 +1626,68 @@ def davinci_style():
 
         print(f"[达芬奇] 图片大小: {len(image_data)} 字节")
 
-        # 1. 使用Vision API分析图片,获取详细描述
+        # 1. 使用Vision API分析图片,获取详细描述 (优先使用Kimi)
         print("[达芬奇] 使用Vision API分析图片...")
 
         try:
             # 将图片编码为base64
             import base64
             image_b64 = base64.b64encode(image_data).decode('utf-8')
+            image_url = f"data:image/png;base64,{image_b64}"
 
-            # 调用Vision API
-            vision_response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "请详细描述这张图片的内容,包括主要主体、构图、颜色、场景、人物、物体等所有细节。用英文描述,约150-200字。"
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/png;base64,{image_b64}"
+            # 优先使用Kimi Vision API
+            if kimi_client:
+                print("[达芬奇] 使用Kimi Vision API...")
+                vision_response = kimi_client.chat.completions.create(
+                    model="kimi-k2.5",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "你是 Kimi，由 Moonshot AI 提供的人工智能助手。"
+                        },
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": image_url
+                                    }
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "请详细描述这张图片的内容,包括主要主体、构图、颜色、场景、人物、物体等所有细节。用英文描述,约150-200字。"
                                 }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens=500
-            )
+                            ]
+                        }
+                    ],
+                    temperature=0.3,
+                    max_tokens=500
+                )
+            else:
+                # 回退到OpenAI Vision API
+                print("[达芬奇] 使用OpenAI Vision API...")
+                vision_response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": "请详细描述这张图片的内容,包括主要主体、构图、颜色、场景、人物、物体等所有细节。用英文描述,约150-200字。"
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": image_url
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    max_tokens=500
+                )
 
             image_description = vision_response.choices[0].message.content.strip()
             print(f"[达芬奇] 图片描述: {image_description[:100]}...")
