@@ -1671,15 +1671,28 @@ def davinci_style():
 
             print(f"[达芬奇] 图片生成成功")
 
-            # 获取base64编码的图片
+            # 获取图片数据
             image_data = response.data[0]
-            image_b64 = image_data.b64_json
+            print(f"[达芬奇] 响应数据字段: {dir(image_data)}")
 
-            if not image_b64:
-                raise Exception("生成的图片数据为空")
+            # 检查是base64还是URL
+            if hasattr(image_data, 'b64_json') and image_data.b64_json:
+                # 使用base64数据
+                image_b64 = image_data.b64_json
+                print(f"[达芬奇] 使用base64数据, 长度: {len(image_b64)}")
+                # 解码base64为bytes
+                image_bytes = base64.b64decode(image_b64)
+            elif hasattr(image_data, 'url') and image_data.url:
+                # 使用URL下载图片
+                image_url = image_data.url
+                print(f"[达芬奇] 使用URL下载图片: {image_url}")
 
-            # 解码base64为bytes
-            image_bytes = base64.b64decode(image_b64)
+                import requests
+                img_response = requests.get(image_url, timeout=60)
+                img_response.raise_for_status()
+                image_bytes = img_response.content
+            else:
+                raise Exception("生成的图片数据为空,没有找到b64_json或url字段")
 
             # 生成文件名
             timestamp = int(time.time())
