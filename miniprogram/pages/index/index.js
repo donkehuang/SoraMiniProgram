@@ -52,7 +52,6 @@ Page({
     davinciStyle: '',  // 主风格：'oil', 'pencil', 'ink'
     davinciImageUrl: '',  // 用户上传的参考图片
     davinciText: '',  // 描述文字
-    davinciOutputType: 'image',  // 输出类型：'image' 或 'video'
     selectedDavinciSubStyle: '',  // 选中的子风格
     davinciSubStyles: [],  // 子风格列表
 
@@ -1510,6 +1509,20 @@ Page({
     })
   },
 
+  // 关闭结果弹窗
+  closeResultModal() {
+    this.setData({
+      imageUrl: '',
+      videoUrl: '',
+      optimizePrompt: ''
+    })
+  },
+
+  // 阻止事件冒泡
+  stopPropagation() {
+    // 阻止点击内容区域时关闭弹窗
+  },
+
   // 下载视频到本地临时目录（带重试）
   async downloadVideoWithRetry(videoId, apiBaseUrl, maxRetries = 3) {
     console.log(`[重试下载] 开始下载视频，最大重试次数: ${maxRetries}`)
@@ -2308,7 +2321,7 @@ Page({
           method: 'POST',
           data: {
             prompt: finalPrompt,
-            seconds: 8,  // 固定8秒
+            seconds: '8',  // 固定8秒（字符串格式）
             size: '1280x720'  // 横屏
           },
           header: {
@@ -2607,17 +2620,9 @@ Page({
     })
   },
 
-  // 生成宠物说话视频
-  async generatePetTalkVideo() {
-    const { petImageUrl, petDialogue, apiBaseUrl } = this.data
-
-    if (!petImageUrl) {
-      wx.showToast({
-        title: '请先上传宠物照片',
-        icon: 'none'
-      })
-      return
-    }
+  // 生成宠物说话图片
+  async generatePetTalkImage() {
+    const { petDialogue, apiBaseUrl } = this.data
 
     // 检查登录状态
     const isLoggedIn = await this.checkLoginState()
@@ -2638,25 +2643,13 @@ Page({
     })
 
     try {
-      // 第一步：上传宠物图片到云存储
+      // 生成宠物说话图片
       this.setData({
-        generationProgress: 20,
-        statusText: '正在上传宠物照片...'
+        generationProgress: 30,
+        statusText: '正在生成图片...'
       })
 
-      const timestamp = Date.now()
-      const cloudPath = `pet_input/${timestamp}.png`
-      const uploadResult = await cloudStorage.uploadFile(petImageUrl, cloudPath)
-
-      console.log('[宠物说话] 图片上传成功:', uploadResult.fileID)
-
-      // 第二步：生成首帧图片（宠物+台词）
-      this.setData({
-        generationProgress: 40,
-        statusText: '正在生成首帧图片...'
-      })
-
-      // 构建生成首帧的提示词
+      // 构建生成图片的提示词
       const firstFramePrompt = `A cute pet (cat or dog) with a speech bubble containing Chinese text "${finalDialogue}", the pet is looking at the camera with a cute expression, warm and cozy lighting, high quality, realistic style`
 
       const firstFrameRequest = await new Promise((resolve, reject) => {
@@ -2680,47 +2673,27 @@ Page({
       }
 
       const firstFrameUrl = firstFrameRequest.data.imageUrl
-      console.log('[宠物说话] 首帧图片生成成功:', firstFrameUrl)
+      console.log('[宠物说话] 图片生成成功:', firstFrameUrl)
 
       this.setData({
-        generationProgress: 60,
-        statusText: '正在生成视频...'
-      })
-
-      // 第三步：基于首帧生成8秒视频
-      const videoRequest = await new Promise((resolve, reject) => {
-        wx.request({
-          url: `${apiBaseUrl}/api/generate-video`,
-          method: 'POST',
-          data: {
-            prompt: `Cute pet talking and making cute expressions, warm lighting, the pet is playful and adorable, high quality video, natural movement`,
-            seconds: 8,
-            size: '1280x720',
-            imageUrl: firstFrameUrl
-          },
-          header: {
-            'content-type': 'application/json'
-          },
-          success: (res) => resolve(res),
-          fail: (err) => reject(err)
-        })
-      })
-
-      if (!videoRequest.data || !videoRequest.data.success) {
-        throw new Error(videoRequest.data?.error || '生成视频失败')
-      }
-
-      const videoId = videoRequest.data.videoId
-      console.log('[宠物说话] 视频任务创建成功:', videoId)
-
-      this.setData({
-        currentVideoId: videoId,
         generationProgress: 70,
-        statusText: '等待视频生成...'
+        statusText: '正在下载图片...'
       })
 
-      // 轮询视频状态
-      await this.pollPetTalkVideoStatus(videoId, apiBaseUrl, uploadResult.fileID, finalDialogue)
+      // 下载图片到本地
+      const localPath = await this.downloadImageToLocal(firstFrameUrl, apiBaseUrl)
+
+      this.setData({
+        generationProgress: 90,
+        statusText: '正在上传到云存储...'
+      })
+
+      // 上传到云存储
+      const cloudPath = `pet_images/${timestamp}.png`
+      const resultUploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
+
+      // 保存到数据库
+      await this.savePetTalkImageToDatabase(resultUploadResult, timestamp, finalDialogue)
 
     } catch (error) {
       console.error('[宠物说话] 生成失败:', error)
@@ -2920,60 +2893,35 @@ Page({
 
   // ========== 我是达芬奇功能 ==========
 
-  // 子风格数据配置
-  davinciSubStylesConfig: {
-    'oil': [
-      { id: 'impressionism', name: '印象派', description: '莫奈风格，柔和色彩和光影' },
-      { id: 'van-gogh', name: '梵高风格', description: '星空、向日葵的笔触' },
-      { id: 'renaissance', name: '文艺复兴', description: '达芬奇时代的经典油画' },
-      { id: 'portrait', name: '古典肖像', description: '油画质感的人像作品' }
-    ],
-    'pencil': [
-      { id: 'sketch', name: '素描', description: '快速勾勒的线条风格' },
-      { id: 'detailed', name: '精细素描', description: '细节丰富的铅笔画' },
-      { id: 'charcoal', name: '炭笔画', description: '粗糙质感的炭笔风格' },
-      { id: 'cross-hatch', name: '交叉排线', description: '经典排线技法' }
-    ],
-    'ink': [
-      { id: 'mountain-water', name: '山水画', description: '山水意境的水墨风格' },
-      { id: 'flower-bird', name: '花鸟画', description: '花鸟主题的水墨画' },
-      { id: 'figure', name: '人物水墨', description: '人物主题的水墨风格' },
-      { id: 'free-style', name: '写意水墨', description: '自由奔放的写意风格' }
-    ]
-  },
-
-  // 风格提示词映射
-  davinciStylePrompts: {
-    'oil': {
-      'base': 'Oil painting style, classic brushstrokes, rich colors, canvas texture',
-      'impressionism': ', Claude Monet impressionist style, soft colors, light effects, visible brushwork',
-      'van-gogh': ', Vincent van Gogh style, bold brushstrokes, swirling patterns, vibrant colors',
-      'renaissance': ', Renaissance oil painting style, sfumato technique, classical composition',
-      'portrait': ', classical portrait oil painting, chiaroscuro lighting, smooth skin tones'
-    },
-    'pencil': {
-      'base': 'Pencil drawing, graphite, sketch lines, shading',
-      'sketch': ', quick pencil sketch, loose lines, gestural drawing',
-      'detailed': ', detailed pencil drawing, fine lines, precise shading',
-      'charcoal': ', charcoal drawing, rough texture, smudged effects',
-      'cross-hatch': ', pencil drawing with cross-hatching technique, precise lines'
-    },
-    'ink': {
-      'base': 'Traditional Chinese ink painting, black ink, white paper, brush strokes',
-      'mountain-water': ', Chinese landscape painting (Shan Shui), misty mountains, flowing water',
-      'flower-bird': ', Chinese flower and bird painting, delicate brushwork, elegant composition',
-      'figure': ', Chinese figure painting, calligraphic lines, expressive gesture',
-      'free-style': ', Xieyi style freehand painting, bold brushwork, spontaneous expression'
-    }
-  },
-
   // 切换达芬奇主风格
   onDavinciStyleChange(e) {
     const style = e.currentTarget.dataset.style
     console.log('[达芬奇] 切换主风格:', style)
 
+    // 定义子风格配置（直接内联，避免访问问题）
+    const davinciSubStylesConfig = {
+      'oil': [
+        { id: 'impressionism', name: '印象派', description: '莫奈风格，柔和色彩和光影' },
+        { id: 'van-gogh', name: '梵高风格', description: '星空、向日葵的笔触' },
+        { id: 'renaissance', name: '文艺复兴', description: '达芬奇时代的经典油画' },
+        { id: 'portrait', name: '古典肖像', description: '油画质感的人像作品' }
+      ],
+      'pencil': [
+        { id: 'sketch', name: '素描', description: '快速勾勒的线条风格' },
+        { id: 'detailed', name: '精细素描', description: '细节丰富的铅笔画' },
+        { id: 'charcoal', name: '炭笔画', description: '粗糙质感的炭笔风格' },
+        { id: 'cross-hatch', name: '交叉排线', description: '经典排线技法' }
+      ],
+      'ink': [
+        { id: 'mountain-water', name: '山水画', description: '山水意境的水墨风格' },
+        { id: 'flower-bird', name: '花鸟画', description: '花鸟主题的水墨画' },
+        { id: 'figure', name: '人物水墨', description: '人物主题的水墨风格' },
+        { id: 'free-style', name: '写意水墨', description: '自由奔放的写意风格' }
+      ]
+    }
+
     // 加载对应的子风格
-    const subStyles = this.davinciSubStylesConfig[style] || []
+    const subStyles = davinciSubStylesConfig[style] || []
 
     this.setData({
       davinciStyle: style,
@@ -2989,16 +2937,6 @@ Page({
 
     this.setData({
       selectedDavinciSubStyle: subStyle
-    })
-  },
-
-  // 切换输出类型
-  onDavinciOutputTypeChange(e) {
-    const type = e.currentTarget.dataset.type
-    console.log('[达芬奇] 切换输出类型:', type)
-
-    this.setData({
-      davinciOutputType: type
     })
   },
 
@@ -3053,19 +2991,11 @@ Page({
 
   // 生成达芬奇作品
   async generateDaVinciWork() {
-    const { davinciStyle, davinciImageUrl, davinciText, davinciOutputType, selectedDavinciSubStyle, apiBaseUrl } = this.data
+    const { davinciStyle, davinciImageUrl, davinciText, selectedDavinciSubStyle, apiBaseUrl } = this.data
 
     if (!davinciStyle) {
       wx.showToast({
         title: '请选择绘画风格',
-        icon: 'none'
-      })
-      return
-    }
-
-    if (!davinciText.trim()) {
-      wx.showToast({
-        title: '请输入描述内容',
         icon: 'none'
       })
       return
@@ -3085,8 +3015,33 @@ Page({
     })
 
     try {
+      // 定义风格提示词配置（直接内联）
+      const davinciStylePrompts = {
+        'oil': {
+          'base': 'Oil painting style, classic brushstrokes, rich colors, canvas texture',
+          'impressionism': ', Claude Monet impressionist style, soft colors, light effects, visible brushwork',
+          'van-gogh': ', Vincent van Gogh style, bold brushstrokes, swirling patterns, vibrant colors',
+          'renaissance': ', Renaissance oil painting style, sfumato technique, classical composition',
+          'portrait': ', classical portrait oil painting, chiaroscuro lighting, smooth skin tones'
+        },
+        'pencil': {
+          'base': 'Pencil drawing, graphite, sketch lines, shading',
+          'sketch': ', quick pencil sketch, loose lines, gestural drawing',
+          'detailed': ', detailed pencil drawing, fine lines, precise shading',
+          'charcoal': ', charcoal drawing, rough texture, smudged effects',
+          'cross-hatch': ', pencil drawing with cross-hatching technique, precise lines'
+        },
+        'ink': {
+          'base': 'Traditional Chinese ink painting, black ink, white paper, brush strokes',
+          'mountain-water': ', Chinese landscape painting (Shan Shui), misty mountains, flowing water',
+          'flower-bird': ', Chinese flower and bird painting, delicate brushwork, elegant composition',
+          'figure': ', Chinese figure painting, calligraphic lines, expressive gesture',
+          'free-style': ', Xieyi style freehand painting, bold brushwork, spontaneous expression'
+        }
+      }
+
       // 构建风格提示词
-      const styleConfig = this.davinciStylePrompts[davinciStyle]
+      const styleConfig = davinciStylePrompts[davinciStyle]
       const basePrompt = styleConfig.base
       const subStylePrompt = selectedDavinciSubStyle ? styleConfig[selectedDavinciSubStyle] || '' : ''
       const finalPrompt = `${davinciText} ${basePrompt}${subStylePrompt}, high quality, artistic`
@@ -3110,13 +3065,8 @@ Page({
         uploadedImageUrl = uploadResult.tempFileURL || uploadResult.fileID
       }
 
-      if (davinciOutputType === 'image') {
-        // 生成图片
-        await this.generateDaVinciImage(finalPrompt, uploadedImageUrl)
-      } else {
-        // 生成视频
-        await this.generateDaVinciVideo(finalPrompt, uploadedImageUrl)
-      }
+      // 只生成图片
+      await this.generateDaVinciImage(finalPrompt, uploadedImageUrl)
 
     } catch (error) {
       console.error('[达芬奇] 生成失败:', error)
@@ -3142,21 +3092,25 @@ Page({
       statusText: '正在生成画作...'
     })
 
-    // 调用生图API
+    // 调用达芬奇风格转换API
     const requestPromise = new Promise((resolve, reject) => {
-      console.log('[达芬奇] 请求URL:', `${apiBaseUrl}/api/generate-image`)
+      console.log('[达芬奇] 请求URL:', `${apiBaseUrl}/api/davinci-style`)
+
       const requestData = {
         prompt: prompt,
         orientation: 'horizontal'
       }
 
-      // 如果有参考图片，添加到请求中
+      // 添加参考图片
       if (referenceImage) {
         requestData.imageUrl = referenceImage
+        console.log('[达芬奇] 使用参考图片:', referenceImage)
+      } else {
+        console.log('[达芬奇] 没有参考图片，将生成新图片')
       }
 
       wx.request({
-        url: `${apiBaseUrl}/api/generate-image`,
+        url: `${apiBaseUrl}/api/davinci-style`,
         method: 'POST',
         data: requestData,
         header: {
@@ -3174,7 +3128,7 @@ Page({
     }
 
     const imageUrl = res.data.imageUrl
-    console.log('[达芬奇] 图片生成成功:', imageUrl)
+    console.log('[达芬奇] 画作生成成功:', imageUrl)
 
     // 下载图片
     this.setData({
@@ -3194,7 +3148,7 @@ Page({
     const cloudPath = `davinci_images/${timestamp}.png`
     const uploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
 
-    await this.saveDaVinciResultToDatabase(uploadResult, timestamp, 'image')
+    await this.saveDaVinciResultToDatabase(uploadResult, timestamp)
 
     this.setData({
       isGenerating: false,
@@ -3215,194 +3169,8 @@ Page({
     })
   },
 
-  // 生成达芬奇视频
-  async generateDaVinciVideo(prompt, referenceImage) {
-    const { apiBaseUrl } = this.data
-
-    this.setData({
-      generationProgress: 40,
-      statusText: '正在生成视频...'
-    })
-
-    // 调用视频生成API
-    const requestPromise = new Promise((resolve, reject) => {
-      console.log('[达芬奇] 请求URL:', `${apiBaseUrl}/api/generate-video`)
-      const requestData = {
-        prompt: prompt,
-        seconds: 8,
-        size: '1280x720'
-      }
-
-      // 如果有参考图片，添加到请求中
-      if (referenceImage) {
-        requestData.imageUrl = referenceImage
-      }
-
-      wx.request({
-        url: `${apiBaseUrl}/api/generate-video`,
-        method: 'POST',
-        data: requestData,
-        header: {
-          'content-type': 'application/json'
-        },
-        success: (res) => resolve(res),
-        fail: (err) => reject(err)
-      })
-    })
-
-    const res = await requestPromise
-
-    if (!res.data || !res.data.success) {
-      throw new Error(res.data?.error || '生成失败')
-    }
-
-    const videoId = res.data.videoId
-    console.log('[达芬奇] 视频任务创建成功:', videoId)
-
-    this.setData({
-      currentVideoId: videoId,
-      generationProgress: 50,
-      statusText: '等待视频生成...'
-    })
-
-    // 轮询视频状态
-    await this.pollDaVinciVideoStatus(videoId, apiBaseUrl)
-  },
-
-  // 轮询达芬奇视频状态
-  async pollDaVinciVideoStatus(videoId, apiBaseUrl) {
-    const pollInterval = 3000
-
-    const poll = async () => {
-      try {
-        const res = await new Promise((resolve, reject) => {
-          wx.request({
-            url: `${apiBaseUrl}/api/video-status/${videoId}`,
-            method: 'GET',
-            success: (res) => resolve(res),
-            fail: (err) => reject(err)
-          })
-        })
-
-        if (!res.data || !res.data.success) {
-          throw new Error('查询状态失败')
-        }
-
-        const status = res.data.status
-        const progress = res.data.progress
-
-        const actualProgress = 50 + (progress * 0.45)  // 50%-95%
-        const statusMap = {
-          'queued': '排队中',
-          'in_progress': '生成中',
-          'completed': '已完成',
-          'failed': '失败'
-        }
-
-        this.setData({
-          generationProgress: actualProgress,
-          statusText: `${statusMap[status]} (${Math.round(actualProgress)}%)`
-        })
-
-        console.log(`[达芬奇] ${statusMap[status]}: ${Math.round(actualProgress)}%`)
-
-        if (status === 'completed') {
-          console.log('[达芬奇] 视频生成完成')
-
-          this.setData({
-            statusText: '等待视频就绪...'
-          })
-
-          await new Promise(resolve => setTimeout(resolve, 5000))
-
-          this.setData({
-            generationProgress: 95,
-            statusText: '正在下载视频...'
-          })
-
-          await this.waitForVideoReady(videoId, apiBaseUrl)
-
-          const localPath = await this.downloadVideoWithRetry(videoId, apiBaseUrl, 3)
-
-          this.setData({
-            generationProgress: 98,
-            statusText: '正在上传到云存储...'
-          })
-
-          const timestamp = Date.now()
-          const cloudPath = `davinci_videos/${timestamp}.mp4`
-          const uploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
-
-          await this.saveDaVinciResultToDatabase(uploadResult, timestamp, 'video', videoId)
-
-          this.setData({
-            isGenerating: false,
-            generationProgress: 100,
-            statusText: '生成完成！'
-          })
-
-          wx.showToast({
-            title: '已保存到作品',
-            icon: 'success'
-          })
-
-          setTimeout(() => {
-            this.setData({
-              showDaVinciView: false,
-              davinciImageUrl: '',
-              davinciText: '',
-              isGenerating: false,
-              generationProgress: 0,
-              statusText: ''
-            })
-          }, 2000)
-
-          wx.removeSavedFile({
-            filePath: localPath,
-            success: () => console.log('[达芬奇] 临时文件已删除')
-          })
-
-          return
-
-        } else if (status === 'failed') {
-          throw new Error(res.data.error || '视频生成失败')
-
-        } else {
-          setTimeout(() => {
-            if (this.data.currentVideoId === videoId) {
-              poll()
-            }
-          }, pollInterval)
-        }
-
-      } catch (error) {
-        console.error('[达芬奇] 状态查询失败:', error)
-
-        if (error.message && error.message.includes('视频任务不存在')) {
-          this.setData({
-            isGenerating: false,
-            errorMessage: '服务器重启，请重新生成'
-          })
-          return
-        }
-
-        if (this.data.currentVideoId !== videoId) {
-          return
-        }
-
-        setTimeout(() => {
-          if (this.data.currentVideoId === videoId) {
-            poll()
-          }
-        }, pollInterval)
-      }
-    }
-
-    poll()
-  },
-
   // 保存达芬奇作品到数据库
-  async saveDaVinciResultToDatabase(uploadResult, timestamp, type, videoId = null) {
+  async saveDaVinciResultToDatabase(uploadResult, timestamp) {
     try {
       const db = wx.cloud.database()
 
@@ -3415,7 +3183,7 @@ Page({
       const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
 
       const data = {
-        type: type === 'image' ? 'davinci-image' : 'davinci-video',
+        type: 'davinci-image',
         style: this.data.davinciStyle,
         subStyle: this.data.selectedDavinciSubStyle,
         text: this.data.davinciText,
@@ -3434,14 +3202,9 @@ Page({
         likeCount: 0
       }
 
-      if (videoId) {
-        data.videoId = videoId
-      }
-
       console.log('[达芬奇] 保存数据:', data)
 
-      const collectionName = type === 'image' ? 'images' : 'videos'
-      await db.collection(collectionName).add({
+      await db.collection('images').add({
         data: data
       })
 
@@ -3449,6 +3212,50 @@ Page({
 
     } catch (error) {
       console.error('[达芬奇] 保存失败:', error)
+      throw error
+    }
+  },
+
+  // 保存宠物说话图片到数据库
+  async savePetTalkImageToDatabase(uploadResult, timestamp, dialogue) {
+    try {
+      const db = wx.cloud.database()
+
+      const userInfo = wx.getStorageSync('userInfo')
+      if (!userInfo || !userInfo.nickName) {
+        throw new Error('用户未登录')
+      }
+
+      const date = new Date(timestamp)
+      const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
+
+      const data = {
+        type: 'pet-talk-image',
+        dialogue: dialogue,
+        fileID: uploadResult.fileID,
+        httpURL: uploadResult.tempFileURL || uploadResult.fileID,
+        status: 'completed',
+        createTime: db.serverDate(),
+        date: dateStr,
+        timestamp: timestamp,
+        userInfo: {
+          nickName: userInfo.nickName,
+          avatarUrl: userInfo.avatarUrl
+        },
+        viewCount: 0,
+        likeCount: 0
+      }
+
+      console.log('[宠物说话] 保存数据:', data)
+
+      await db.collection('images').add({
+        data: data
+      })
+
+      console.log('[宠物说话] 保存成功')
+
+    } catch (error) {
+      console.error('[宠物说话] 保存失败:', error)
       throw error
     }
   }

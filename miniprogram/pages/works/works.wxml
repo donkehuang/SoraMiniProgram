@@ -1,12 +1,12 @@
 <view class="container">
   <!-- 渐变背景 -->
   <view class="gradient-bg"></view>
-  
+
   <!-- 头部 -->
   <view class="header">
     <view class="header-content">
       <text class="title">我的作品</text>
-      <text class="subtitle">共 {{videos.length}} 个作品</text>
+      <text class="subtitle">共 {{videos.length + images.length}} 个作品</text>
     </view>
     <view class="header-icon">🎬</view>
   </view>
@@ -18,36 +18,61 @@
   </view>
 
   <!-- 空状态 -->
-  <view class="empty-container" wx:if="{{!loading && videos.length === 0}}">
+  <view class="empty-container" wx:if="{{!loading && videos.length === 0 && images.length === 0}}">
     <view class="empty-illustration">
       <view class="empty-circle">
         <text class="empty-icon">🎥</text>
       </view>
     </view>
     <text class="empty-text">还没有作品</text>
-    <text class="empty-hint">开始创作你的第一个AI视频</text>
+    <text class="empty-hint">开始创作你的第一个AI作品</text>
     <button class="btn-generate" bindtap="goToIndex">
       <text class="btn-icon">✨</text>
       <text class="btn-text">立即创作</text>
     </button>
   </view>
 
-  <!-- 视频网格 -->
-  <view class="video-grid" wx:if="{{!loading && videos.length > 0}}">
-    <view class="video-card" wx:for="{{videos}}" wx:key="fileID" bindtap="playVideo" data-video="{{item}}">
-      <!-- 视频缩略图容器 -->
-      <view class="video-thumbnail-wrapper">
-        <video
-          class="video-thumbnail"
-          src="{{item.httpURL}}"
-          show-center-play-btn="{{false}}"
-          show-play-btn="{{false}}"
-          controls="{{false}}"
-          enable-play-gesture="{{false}}"
-          object-fit="cover"
-        />
-        <!-- 日期标签 - 右上角 -->
-        <view class="date-tag">{{item.date}}</view>
+  <!-- 视频作品区域 -->
+  <view class="works-section" wx:if="{{!loading && videos.length > 0}}">
+    <view class="section-title">
+      <text class="title-text">🎬 视频作品 ({{videos.length}})</text>
+    </view>
+    <view class="video-grid">
+      <view class="video-card" wx:for="{{videos}}" wx:key="fileID" bindtap="playVideo" data-video="{{item}}">
+        <!-- 视频缩略图容器 -->
+        <view class="video-thumbnail-wrapper">
+          <video
+            class="video-thumbnail"
+            src="{{item.httpURL}}"
+            show-center-play-btn="{{false}}"
+            show-play-btn="{{false}}"
+            controls="{{false}}"
+            enable-play-gesture="{{false}}"
+            object-fit="cover"
+          />
+          <!-- 日期标签 - 右上角 -->
+          <view class="date-tag">{{item.date}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 图片作品区域 -->
+  <view class="works-section" wx:if="{{!loading && images.length > 0}}">
+    <view class="section-title">
+      <text class="title-text">🖼️ 图片作品 ({{images.length}})</text>
+    </view>
+    <view class="image-grid">
+      <view class="image-card" wx:for="{{images}}" wx:key="fileID" bindtap="previewImage" data-image="{{item}}">
+        <view class="image-thumbnail-wrapper">
+          <image
+            class="image-thumbnail"
+            src="{{item.httpURL}}"
+            mode="aspectFill"
+          />
+          <!-- 日期标签 - 右上角 -->
+          <view class="date-tag">{{item.date}}</view>
+        </view>
       </view>
     </view>
   </view>

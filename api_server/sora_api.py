@@ -1526,6 +1526,177 @@ def enhance_upscale():
         }), 500
 
 
+@app.route('/api/davinci-style', methods=['POST', 'OPTIONS'])
+def davinci_style():
+    """达芬奇风格转换API接口"""
+
+    # 处理预检请求
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        print(f"[达芬奇] 收到风格转换请求")
+
+        data = request.json
+        if not data:
+            print("[达芬奇] 请求数据为空")
+            return jsonify({
+                'success': False,
+                'error': '请求数据格式错误'
+            }), 400
+
+        prompt = data.get('prompt', '')
+        imageUrl = data.get('imageUrl', '')  # 参考图片的URL
+        orientation = data.get('orientation', 'vertical')
+
+        print(f"[达芬奇] prompt: {prompt[:50]}..., imageUrl: {imageUrl}, orientation: {orientation}")
+
+        if not imageUrl:
+            print("[达芬奇] 缺少参考图片")
+            return jsonify({
+                'success': False,
+                'error': '请上传参考图片'
+            }), 400
+
+        if not prompt:
+            print("[达芬奇] prompt为空")
+            return jsonify({
+                'success': False,
+                'error': '请输入描述'
+            }), 400
+
+        # 检查违禁词
+        is_valid, error_msg = validate_prompt(prompt)
+        if not is_valid:
+            print(f"[达芬奇] {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 400
+
+        # 根据方向设置尺寸
+        if orientation == 'vertical':
+            size = "1024x1024"  # DALL-E编辑接口只支持正方形
+        else:
+            size = "1024x1024"
+
+        print(f"[达芬奇] 生成尺寸: {size}")
+
+        # 下载参考图片
+        import requests
+        import tempfile
+
+        try:
+            # 处理相对路径
+            if imageUrl.startswith('/images/'):
+                # 服务器本地文件
+                image_filename = imageUrl.split('/')[-1]
+                image_path = os.path.join(IMAGES_DIR, image_filename)
+                print(f"[达芬奇] 读取本地图片: {image_path}")
+
+                with open(image_path, 'rb') as f:
+                    image_data = f.read()
+            else:
+                # 网络URL
+                print(f"[达芬奇] 下载图片: {imageUrl}")
+                response = requests.get(imageUrl, timeout=30)
+                response.raise_for_status()
+                image_data = response.content
+
+        except Exception as e:
+            print(f"[达芬奇] 图片获取失败: {e}")
+            return jsonify({
+                'success': False,
+                'error': '参考图片获取失败'
+            }), 400
+
+        print(f"[达芬奇] 图片大小: {len(image_data)} 字节")
+
+        # 调用OpenAI DALL-E编辑API
+        print("[达芬奇] 开始调用OpenAI DALL-E编辑API...")
+
+        try:
+            response = client.images.edit(
+                image=image_data,
+                prompt=prompt,
+                n=1,
+                size="1024x1024"
+            )
+
+            print(f"[达芬奇] 编辑成功")
+
+            # 获取base64编码的图片
+            image_data = response.data[0]
+            image_b64 = image_data.b64_json
+
+            # 解码base64为bytes
+            image_bytes = base64.b64decode(image_b64)
+
+            # 生成文件名
+            timestamp = int(time.time())
+            filename = f"davinci_{timestamp}.png"
+            filepath = os.path.join(IMAGES_DIR, filename)
+
+            # 保存图片
+            with open(filepath, 'wb') as f:
+                f.write(image_bytes)
+
+            print(f"[达芬奇] 图片已保存: {filepath}")
+
+            # 裁剪为目标尺寸
+            cropped_filename = f"davinci_{timestamp}_cropped.png"
+            cropped_filepath = os.path.join(IMAGES_DIR, cropped_filename)
+
+            try:
+                if orientation == 'vertical':
+                    crop_image_to_sora_size(filepath, cropped_filepath, 720, 1280)
+                else:
+                    crop_image_to_sora_size(filepath, cropped_filepath, 1280, 720)
+                print(f"[达芬奇] 裁剪完成: {cropped_filepath}")
+                final_filename = cropped_filename
+            except Exception as crop_error:
+                print(f"[达芬奇] 裁剪失败: {crop_error}，使用原始图片")
+                final_filename = filename
+
+            # 返回结果
+            response_data = {
+                'success': True,
+                'imageUrl': f'/images/{final_filename}',
+                'orientation': orientation
+            }
+
+            print(f"[达芬奇] 返回结果: {response_data}")
+            return jsonify(response_data), 200
+
+        except Exception as api_error:
+            print(f"[达芬奇] 编辑失败: {api_error}")
+            import traceback
+            traceback.print_exc()
+
+            error_message = str(api_error)
+
+            # 检查是否是透明图片错误
+            if "transparent" in error_message.lower() or "rgba" in error_message.lower():
+                return jsonify({
+                    'success': False,
+                    'error': '图片格式不支持，请使用不透明的JPG或PNG图片'
+                }), 400
+
+            return jsonify({
+                'success': False,
+                'error': f'编辑失败: {error_message}'
+            }), 500
+
+    except Exception as e:
+        print(f"[达芬奇] 接口错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'处理失败: {str(e)}'
+        }), 500
+
+
 @app.route('/api/enhance-animate', methods=['POST', 'OPTIONS'])
 def enhance_animate():
     """让照片动起来（轻微晃动）的API接口"""

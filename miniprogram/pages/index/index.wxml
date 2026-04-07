@@ -24,8 +24,8 @@
   <!-- 内容层 -->
   <view class="content-wrapper">
     <view class="header">
-      <text class="title">Sora AI 创作</text>
-      <text class="subtitle">文字生视频 · 专业创作工具</text>
+      <text class="title">简约视频，随心生成</text>
+      <text class="subtitle">您的视频生成贴心小帮手</text>
     </view>
 
     <!-- 主界面：显示功能栏 -->
@@ -76,7 +76,7 @@
           <view class="function-overlay"></view>
           <view class="function-content">
             <view class="function-title">宠物开口说话</view>
-            <view class="function-desc">搞笑台词+8秒视频</view>
+            <view class="function-desc">搞笑台词+趣味图片</view>
           </view>
           <view class="function-arrow">→</view>
         </view>
@@ -86,7 +86,7 @@
           <view class="function-overlay"></view>
           <view class="function-content">
             <view class="function-title">我是达芬奇</view>
-            <view class="function-desc">风格化+图片/视频</view>
+            <view class="function-desc">风格化艺术创作</view>
           </view>
           <view class="function-arrow">→</view>
         </view>
@@ -343,54 +343,32 @@
         <text class="back-text">返回</text>
       </view>
 
-      <!-- 图片选择区域 -->
-      <view class="upload-section">
-        <view class="upload-label">
-          <text class="label-icon">📷</text>
-          <text class="label-text">上传宠物照片</text>
+      <!-- 台词输入区域 -->
+      <view class="input-section">
+        <view class="input-label">
+          <text class="label-icon">💬</text>
+          <text class="label-text">想让宠物说的话</text>
         </view>
+        <textarea
+          class="prompt-input"
+          placeholder="不输入将随机生成搞笑台词"
+          value="{{petDialogue}}"
+          bindinput="onPetDialogueInput"
+          maxlength="100"
+          auto-height
+        />
+        <text class="char-count">{{petDialogue.length}}/100</text>
 
-        <!-- 图片预览 -->
-        <view class="image-preview-container" bindtap="choosePetImage">
-          <image
-            wx:if="{{petImageUrl}}"
-            class="pet-preview"
-            src="{{petImageUrl}}"
-            mode="aspectFit"
-          />
-          <view wx:else class="upload-placeholder">
-            <text class="upload-icon">📸</text>
-            <text class="upload-text">点击选择宠物照片</text>
-          </view>
-        </view>
-
-        <!-- 台词输入 -->
-        <view class="dialogue-section">
-          <view class="dialogue-label">
-            <text class="dialogue-icon">💬</text>
-            <text class="dialogue-title">想让宠物说的话</text>
-          </view>
-          <textarea
-            class="dialogue-input"
-            placeholder="不输入将随机生成搞笑台词"
-            value="{{petDialogue}}"
-            bindinput="onPetDialogueInput"
-            maxlength="100"
-            auto-height
-          />
-          <text class="char-count">{{petDialogue.length}}/100</text>
-
-          <!-- 随机台词按钮 -->
-          <button class="random-dialogue-btn" bindtap="generateRandomDialogue">
-            <text class="random-icon">🎲</text>
-            <text>随机生成搞笑台词</text>
-          </button>
-        </view>
+        <!-- 随机台词按钮 -->
+        <button class="random-dialogue-btn" bindtap="generateRandomDialogue">
+          <text class="random-icon">🎲</text>
+          <text>随机生成搞笑台词</text>
+        </button>
       </view>
 
       <!-- 生成按钮 -->
-      <button class="generate-btn" bindtap="generatePetTalkVideo" disabled="{{!petImageUrl}}">
-        生成宠物说话视频
+      <button class="generate-btn" bindtap="generatePetTalkImage">
+        生成宠物说话图片
       </button>
     </view>
 
@@ -466,30 +444,7 @@
           <text class="char-count">{{davinciText.length}}/500</text>
         </view>
 
-        <!-- 输出类型选择 -->
-        <view class="davinci-output-section">
-          <view class="output-label">
-            <text class="label-icon">🎬</text>
-            <text class="label-text">选择输出类型</text>
-          </view>
 
-          <view class="davinci-output-options">
-            <view class="option-item" bindtap="onDavinciOutputTypeChange" data-type="image">
-              <view class="option-radio {{davinciOutputType === 'image' ? 'active' : ''}}"></view>
-              <view class="option-content">
-                <text class="option-text">生成图片</text>
-                <text class="option-desc">生成一张风格化图片</text>
-              </view>
-            </view>
-            <view class="option-item" bindtap="onDavinciOutputTypeChange" data-type="video">
-              <view class="option-radio {{davinciOutputType === 'video' ? 'active' : ''}}"></view>
-              <view class="option-content">
-                <text class="option-text">生成视频（8秒）</text>
-                <text class="option-desc">生成8秒动态视频</text>
-              </view>
-            </view>
-          </view>
-        </view>
 
         <!-- 优化子风格选择（当选择了某个主风格时显示） -->
         <view class="davinci-substyle-section" wx:if="{{davinciStyle}}">
@@ -510,8 +465,8 @@
       </view>
 
       <!-- 生成按钮 -->
-      <button class="generate-btn" bindtap="generateDaVinciWork" disabled="{{!davinciText}}">
-        {{davinciOutputType === 'image' ? '生成画作' : '生成视频'}}
+      <button class="generate-btn" bindtap="generateDaVinciWork">
+        生成画作
       </button>
     </view>
 
@@ -604,66 +559,73 @@
       <button class="cancel-btn" bindtap="cancelGeneration" wx:if="{{!isUploading}}">取消生成</button>
     </view>
 
-    <!-- 图片生成结果 -->
-    <view class="image-result-section" wx:if="{{imageUrl && !isGenerating}}">
-    <view class="result-header">
-      <text class="result-title">✅ 生成成功！</text>
-    </view>
-    <view class="image-display">
-      <image
-        class="generated-image"
-        src="{{imageUrl}}"
-        mode="aspectFit"
-        bindtap="previewImage"
-      />
-    </view>
-    <view class="image-actions">
-      <button class="action-btn" bindtap="saveImageToGallery">保存到相册</button>
-      <button class="action-btn secondary" bindtap="generateVideoFromImage">用此图片生成视频</button>
-    </view>
-    
-    <!-- 优化图片区域 -->
-    <view class="optimize-section">
-      <view class="optimize-header">
-        <text class="optimize-title">🎨 不满意？继续优化</text>
-        <text class="optimize-desc">输入新的提示词来改进图片效果</text>
-      </view>
-      <view class="optimize-input-wrapper">
-        <textarea
-          class="optimize-input"
-          placeholder="例如：增加更多细节，改变风格，调整颜色..."
-          value="{{optimizePrompt}}"
-          bindinput="onOptimizePromptInput"
-          maxlength="300"
-          auto-height
-        />
-        <text class="char-count">{{optimizePrompt.length}}/300</text>
-      </view>
-      <button class="optimize-btn" bindtap="optimizeImage">
-        ✨ 优化图片
-      </button>
-    </view>
-    </view>
+    <!-- 结果弹窗 -->
+    <view class="result-modal" wx:if="{{(imageUrl || videoUrl) && !isGenerating}}" bindtap="closeResultModal">
+      <view class="result-modal-content" catchtap="stopPropagation">
+        <!-- 关闭按钮 -->
+        <view class="modal-close-btn" bindtap="closeResultModal">
+          <text>✕</text>
+        </view>
 
-    <!-- 视频播放区域 -->
-    <view class="result-section" wx:if="{{videoUrl && !isGenerating}}">
-    <view class="result-header">
-      <text class="result-title">✅ 生成成功！</text>
-    </view>
-    <view class="video-info">
-      <text class="video-url">视频地址: {{videoUrl}}</text>
-    </view>
-    <video
-      class="video-player"
-      src="{{videoUrl}}"
-      controls
-      autoplay
-      bindplay="onVideoPlay"
-      binderror="onVideoError"
-      bindload="onVideoLoad"
-      show-center-play-btn="{{true}}"
-      show-play-btn="{{true}}"
-      />
+        <!-- 图片结果 -->
+        <view class="result-image-section" wx:if="{{imageUrl}}">
+          <view class="result-header">
+            <text class="result-title">✅ 画作生成成功！</text>
+          </view>
+          <view class="image-display">
+            <image
+              class="generated-image"
+              src="{{imageUrl}}"
+              mode="aspectFit"
+              bindtap="previewImage"
+            />
+          </view>
+          <view class="image-actions">
+            <button class="action-btn" bindtap="saveImageToGallery">保存到相册</button>
+            <button class="action-btn secondary" bindtap="generateVideoFromImage">用此图片生成视频</button>
+          </view>
+        </view>
+
+        <!-- 视频结果 -->
+        <view class="result-video-section" wx:if="{{videoUrl}}">
+          <view class="result-header">
+            <text class="result-title">✅ 视频生成成功！</text>
+          </view>
+          <video
+            class="result-video-player"
+            src="{{videoUrl}}"
+            controls
+            autoplay
+            bindplay="onVideoPlay"
+            binderror="onVideoError"
+            bindload="onVideoLoad"
+            show-center-play-btn="{{true}}"
+            show-play-btn="{{true}}"
+          />
+        </view>
+
+        <!-- 优化图片区域（仅图片显示） -->
+        <view class="optimize-section" wx:if="{{imageUrl}}">
+          <view class="optimize-header">
+            <text class="optimize-title">🎨 不满意？继续优化</text>
+            <text class="optimize-desc">输入新的提示词来改进图片效果</text>
+          </view>
+          <view class="optimize-input-wrapper">
+            <textarea
+              class="optimize-input"
+              placeholder="例如：增加更多细节，改变风格，调整颜色..."
+              value="{{optimizePrompt}}"
+              bindinput="onOptimizePromptInput"
+              maxlength="300"
+              auto-height
+            />
+            <text class="char-count">{{optimizePrompt.length}}/300</text>
+          </view>
+          <button class="optimize-btn" bindtap="optimizeImage">
+            ✨ 优化图片
+          </button>
+        </view>
+      </view>
     </view>
 
     <!-- 错误信息 -->

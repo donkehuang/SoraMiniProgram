@@ -2,28 +2,51 @@
 Page({
   data: {
     videos: [],
+    images: [],
     loading: false
   },
 
   onLoad() {
     console.log('[作品] 页面加载')
-    this.loadVideos()
+    this.loadWorks()
   },
 
   onShow() {
     console.log('[作品] 页面显示')
     // 每次显示都刷新列表
-    this.loadVideos()
+    this.loadWorks()
+  },
+
+  async loadWorks() {
+    console.log('[作品] 加载作品列表')
+    this.setData({ loading: true })
+
+    try {
+      // 并行加载视频和图片
+      await Promise.all([
+        this.loadVideos(),
+        this.loadImages()
+      ])
+
+      this.setData({ loading: false })
+      console.log('[作品] 加载完成')
+
+    } catch (error) {
+      console.error('[作品] 加载失败:', error)
+      wx.showToast({
+        title: '加载失败: ' + (error.message || error.errMsg),
+        icon: 'none',
+        duration: 3000
+      })
+      this.setData({ loading: false })
+    }
   },
 
   async loadVideos() {
     console.log('[作品] 加载视频列表')
-    this.setData({ loading: true })
 
     try {
-      // 方法1：使用云函数获取（推荐，自动刷新临时链接）
-      console.log('[作品] 调用云函数 getVideos...')
-      
+      // 使用云函数获取视频
       const res = await wx.cloud.callFunction({
         name: 'getVideos'
       })
@@ -32,43 +55,84 @@ Page({
         throw new Error(res.result.error || '获取视频列表失败')
       }
 
-      console.log('[作品] 云函数返回:', res.result.data.length, '条')
+      console.log('[作品] 云函数返回视频:', res.result.data.length, '条')
 
       // 格式化视频数据
       const videos = res.result.data.map(item => ({
         _id: item._id,
         videoId: item.videoId,
         fileID: item.fileID,
-        httpURL: item.tempFileURL || item.httpURL, // 优先使用新的临时链接
+        httpURL: item.tempFileURL || item.httpURL,
         name: item.prompt ? item.prompt.substring(0, 50) + (item.prompt.length > 50 ? '...' : '') : '视频作品',
-        prompt: item.prompt || '', // 完整prompt
+        prompt: item.prompt || '',
         date: item.date || new Date(item.timestamp).toLocaleDateString(),
         duration: item.duration || '未知',
         createTime: item.createTime
       }))
 
-      this.setData({
-        videos: videos,
-        loading: false
-      })
-
-      console.log('[作品] 加载完成，视频数量:', videos.length)
+      this.setData({ videos: videos })
+      console.log('[作品] 视频加载完成，数量:', videos.length)
 
     } catch (error) {
-      console.error('[作品] 加载失败:', error)
-
-      // 如果云函数未部署，回退到直接查询数据库
+      console.error('[作品] 视频加载失败:', error)
       if (error.errMsg && error.errMsg.includes('FunctionName')) {
-        console.log('[作品] 云函数未部署，使用备用方案...')
         await this.loadVideosDirectly()
-      } else {
-        wx.showToast({
-          title: '加载失败: ' + (error.message || error.errMsg),
-          icon: 'none',
-          duration: 3000
-        })
-        this.setData({ loading: false })
       }
+    }
+  },
+
+  async loadImages() {
+    console.log('[作品] 加载图片列表')
+
+    try {
+      const db = wx.cloud.database()
+
+      // 查询所有图片类型的作品
+      const res = await db.collection('images')
+        .orderBy('createTime', 'desc')
+        .limit(20)
+        .get()
+
+      console.log('[作品] 数据库查询图片结果:', res.data.length, '条')
+
+      // 获取所有 fileID
+      const fileIDs = res.data.map(item => item.fileID).filter(id => id)
+
+      if (fileIDs.length === 0) {
+        this.setData({ images: [] })
+        return
+      }
+
+      // 批量获取新的临时链接
+      console.log('[作品] 刷新图片临时链接...')
+      const urlRes = await wx.cloud.getTempFileURL({
+        fileList: fileIDs
+      })
+
+      // 创建 fileID -> tempURL 的映射
+      const urlMap = {}
+      urlRes.fileList.forEach(file => {
+        urlMap[file.fileID] = file.tempFileURL
+      })
+
+      // 格式化图片数据
+      const images = res.data.map(item => ({
+        _id: item._id,
+        fileID: item.fileID,
+        httpURL: urlMap[item.fileID] || item.httpURL,
+        name: item.text ? item.text.substring(0, 50) + (item.text.length > 50 ? '...' : '') : '图片作品',
+        text: item.text || '',
+        style: item.style || '',
+        date: item.date || new Date(item.timestamp).toLocaleDateString(),
+        createTime: item.createTime
+      }))
+
+      this.setData({ images: images })
+      console.log('[作品] 图片加载完成，数量:', images.length)
+
+    } catch (error) {
+      console.error('[作品] 图片加载失败:', error)
+      this.setData({ images: [] })
     }
   },
 
@@ -145,6 +209,16 @@ Page({
     // 跳转到视频播放页面，传递prompt
     wx.navigateTo({
       url: `/pages/player/player?url=${encodeURIComponent(video.httpURL)}&duration=${encodeURIComponent(video.duration || '12秒')}&date=${encodeURIComponent(video.date)}&prompt=${encodeURIComponent(video.prompt || video.name || '')}`
+    })
+  },
+
+  previewImage(e) {
+    const image = e.currentTarget.dataset.image
+    console.log('[作品] 预览图片:', image)
+
+    wx.previewImage({
+      urls: [image.httpURL],
+      current: image.httpURL
     })
   },
 
