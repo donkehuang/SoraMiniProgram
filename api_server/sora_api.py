@@ -1636,35 +1636,21 @@ def davinci_style():
             image_data = output.getvalue()
             print(f"[达芬奇] 压缩后图片大小: {len(image_data)} 字节")
 
-        # 调用OpenAI DALL-E编辑API
+        # 调用OpenAI DALL-E编辑API (只有edit API才能基于参考图片)
         print("[达芬奇] 开始调用OpenAI DALL-E编辑API...")
 
         response = None
 
         try:
-            # 先尝试使用edit API
-            try:
-                print("[达芬奇] 尝试使用edit API...")
-                response = client.images.edit(
-                    image=image_data,
-                    prompt=prompt,
-                    n=1,
-                    size="1024x1024"
-                )
-                print(f"[达芬奇] edit API调用成功")
-            except Exception as edit_error:
-                print(f"[达芬奇] edit API失败,尝试使用生成API: {edit_error}")
-                # 如果edit失败,使用DALL-E 3生成API
-                # 使用DALL-E 3生成,参考图片作为prompt的一部分
-                enhanced_prompt = f"{prompt}. Based on the reference image style."
-                print(f"[达芬奇] 使用DALL-E 3生成, prompt: {enhanced_prompt[:100]}...")
-                response = client.images.generate(
-                    prompt=enhanced_prompt,
-                    n=1,
-                    size="1024x1024",
-                    model="dall-e-3"
-                )
-                print(f"[达芬奇] DALL-E 3生成API调用成功")
+            # 使用edit API (这是唯一能基于参考图片的API)
+            print("[达芬奇] 调用edit API...")
+            response = client.images.edit(
+                image=image_data,
+                prompt=prompt,
+                n=1,
+                size="1024x1024"
+            )
+            print(f"[达芬奇] edit API调用成功")
 
             if not response or not response.data or len(response.data) == 0:
                 raise Exception("API返回的数据为空")

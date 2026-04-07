@@ -3016,25 +3016,25 @@ Page({
       // 定义风格提示词配置（直接内联）
       const davinciStylePrompts = {
         'oil': {
-          'base': 'oil painting',
-          'impressionism': ', impressionist style',
-          'van-gogh': ', van Gogh style',
-          'renaissance': ', renaissance style',
-          'portrait': ', portrait painting'
+          'base': 'oil painting style',
+          'impressionism': ', impressionist style with soft colors and light effects',
+          'van-gogh': ', van Gogh style with bold brushstrokes',
+          'renaissance': ', renaissance style with classical painting techniques',
+          'portrait': ', portrait painting with oil texture'
         },
         'pencil': {
-          'base': 'pencil drawing',
-          'sketch': ', sketch style',
-          'detailed': ', detailed drawing',
-          'charcoal': ', charcoal drawing',
-          'cross-hatch': ', cross-hatch technique'
+          'base': 'pencil drawing style',
+          'sketch': ', quick sketch with loose lines',
+          'detailed': ', detailed drawing with fine shading',
+          'charcoal': ', charcoal drawing with rough texture',
+          'cross-hatch': ', cross-hatch technique for shading'
         },
         'ink': {
-          'base': 'ink painting',
-          'mountain-water': ', landscape painting',
-          'flower-bird': ', flower and bird painting',
-          'figure': ', figure painting',
-          'free-style': ', freehand painting'
+          'base': 'ink painting style',
+          'mountain-water': ', landscape painting with mountain and water elements',
+          'flower-bird': ', painting with flower and bird elements',
+          'figure': ', figure painting with ink wash',
+          'free-style': ', freehand painting with expressive brushstrokes'
         }
       }
 
@@ -3046,9 +3046,10 @@ Page({
       // 根据是否有参考图片构建不同的提示词
       let finalPrompt
       if (davinciImageUrl) {
-        // 有参考图片时,prompt只描述用户输入的内容和风格
+        // 有参考图片时，明确说明保持原图的主要元素和构图，只改变艺术风格
         // edit API会处理参考图片
-        finalPrompt = `${davinciText} ${basePrompt}${subStylePrompt}`
+        const additionalText = davinciText.trim() ? `, ${davinciText.trim()}` : ''
+        finalPrompt = `Keep the main subject, composition and content of the original image. Apply ${basePrompt}${subStylePrompt}${additionalText}.`
       } else {
         // 没有参考图片时,生成新图片
         finalPrompt = `${davinciText} ${basePrompt}${subStylePrompt}`
