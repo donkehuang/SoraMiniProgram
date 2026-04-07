@@ -1617,7 +1617,6 @@ def davinci_style():
 
         try:
             response = client.images.edit(
-                model="dall-e-2",
                 image=image_data,
                 prompt=prompt,
                 n=1,
