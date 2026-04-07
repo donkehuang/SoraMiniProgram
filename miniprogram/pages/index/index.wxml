@@ -582,7 +582,6 @@
           </view>
           <view class="image-actions">
             <button class="action-btn" bindtap="saveImageToGallery">保存到相册</button>
-            <button class="action-btn secondary" bindtap="generateVideoFromImage">用此图片生成视频</button>
           </view>
         </view>
 

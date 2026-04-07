@@ -3042,7 +3042,16 @@ Page({
       const styleConfig = davinciStylePrompts[davinciStyle]
       const basePrompt = styleConfig.base
       const subStylePrompt = selectedDavinciSubStyle ? styleConfig[selectedDavinciSubStyle] || '' : ''
-      const finalPrompt = `${davinciText} ${basePrompt}${subStylePrompt}, high quality, artistic`
+
+      // 根据是否有参考图片构建不同的提示词
+      let finalPrompt
+      if (davinciImageUrl) {
+        // 有参考图片时,强调基于图片的风格转换
+        finalPrompt = `Convert this image to ${basePrompt}${subStylePrompt}. ${davinciText}. Maintain the original composition and subject matter while applying the artistic style transformation. High quality, professional artwork.`
+      } else {
+        // 没有参考图片时,生成新图片
+        finalPrompt = `${davinciText} ${basePrompt}${subStylePrompt}, high quality, artistic masterpiece`
+      }
 
       console.log('[达芬奇] 生成提示词:', finalPrompt)
 

@@ -1285,9 +1285,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(10rpx);
-  -webkit-backdrop-filter: blur(10rpx);
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20rpx);
+  -webkit-backdrop-filter: blur(20rpx);
   z-index: 9999;
   display: flex;
   align-items: center;
