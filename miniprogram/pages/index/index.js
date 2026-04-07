@@ -1767,11 +1767,10 @@ Page({
       const orientation = res.data.orientation || 'vertical'  // 从API响应中获取方向
       console.log('[开口笑] 生成成功:', resultUrl, '方向:', orientation)
 
-      if (smileOutputType === 'image') {
-        // 图片生成：下载、上传、保存
-        this.setData({
-          generationProgress: 60,
-          statusText: '正在下载图片...'
+      // 图片生成：下载、上传、保存
+      this.setData({
+        generationProgress: 60,
+        statusText: '正在下载图片...'
         })
 
         const localPath = await this.downloadImageToLocal(resultUrl, apiBaseUrl)
@@ -1800,7 +1799,7 @@ Page({
         }
 
         // 跳转到结果页
-        wx.redirectTo({
+        wx.navigateTo({
           url: `/pages/smile-result/smile-result?${Object.keys(params).map(key => `${key}=${params[key]}`).join('&')}`
         })
 
@@ -1810,7 +1809,6 @@ Page({
           generationProgress: 0,
           statusText: ''
         })
-      }
 
     } catch (error) {
       console.error('[开口笑] 生成失败:', error)

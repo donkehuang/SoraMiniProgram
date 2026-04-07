@@ -9,13 +9,29 @@ Page({
     orientation: 'vertical',
     resolution: '高清',
     generatedAt: '',
-    imageLoading: true
+    imageLoading: true,
+    backgroundVideoFileID: 'cloud://cloud1-2gd0041e12763b47.636c-cloud1-2gd0041e12763b47-1401157928/background/background.mp4',
+    backgroundVideoUrl: '',
+    showBackgroundVideo: false,
+    backgroundVideoLoading: false
   },
 
   /**
    * 生命周期函数--监听页面加载
    */
   onLoad(options) {
+    // 获取系统状态栏高度
+    const systemInfo = wx.getSystemInfoSync()
+    const statusBarHeight = systemInfo.statusBarHeight || 0
+    const navigationBarHeight = statusBarHeight + 88 // 88rpx = 44px 是导航栏内容高度
+    console.log('[开口笑结果页] 状态栏高度:', statusBarHeight, '导航栏高度:', navigationBarHeight)
+
+    this.setData({
+      statusBarHeight: statusBarHeight,
+      navigationBarHeight: navigationBarHeight
+    })
+
+    this.loadBackgroundVideo()
     console.log('[开口笑结果页] 加载参数:', options)
 
     // 解析参数
@@ -99,6 +115,79 @@ Page({
     }
 
     console.log('[开口笑结果页] 页面数据:', this.data)
+  },
+
+  /**
+   * 加载背景视频
+   */
+  async loadBackgroundVideo() {
+    console.log('[开口笑结果页] 开始加载背景视频')
+
+    this.setData({
+      backgroundVideoLoading: true,
+      showBackgroundVideo: false
+    })
+
+    if (wx.cloud) {
+      try {
+        // 尝试从云存储获取背景视频
+        const result = await wx.cloud.getTempFileURL({
+          fileList: [this.data.backgroundVideoFileID]
+        })
+
+        console.log('[开口笑结果页] 背景视频获取结果:', result)
+
+        if (result.fileList && result.fileList.length > 0 && result.fileList[0].status === 0) {
+          const tempURL = result.fileList[0].tempFileURL
+          console.log('[开口笑结果页] 背景视频临时URL:', tempURL)
+          this.setData({
+            backgroundVideoUrl: tempURL,
+            showBackgroundVideo: true,
+            backgroundVideoLoading: false
+          })
+        } else {
+          console.error('[开口笑结果页] 背景视频获取失败')
+          this.setData({
+            backgroundVideoLoading: false,
+            showBackgroundVideo: false
+          })
+        }
+      } catch (err) {
+        console.error('[开口笑结果页] 背景视频加载异常:', err)
+        this.setData({
+          backgroundVideoLoading: false,
+          showBackgroundVideo: false
+        })
+      }
+    } else {
+      console.warn('[开口笑结果页] 云开发未初始化，不显示背景视频')
+      this.setData({
+        backgroundVideoLoading: false,
+        showBackgroundVideo: false
+      })
+    }
+  },
+
+  /**
+   * 背景视频播放成功
+   */
+  onBackgroundVideoPlay(e) {
+    console.log('[开口笑结果页] 背景视频播放成功:', e)
+    this.setData({
+      showBackgroundVideo: true,
+      backgroundVideoLoading: false
+    })
+  },
+
+  /**
+   * 背景视频加载失败
+   */
+  onBackgroundVideoError(e) {
+    console.error('[开口笑结果页] 背景视频加载失败:', e)
+    this.setData({
+      showBackgroundVideo: false,
+      backgroundVideoLoading: false
+    })
   },
 
   /**
@@ -269,10 +358,43 @@ Page({
    * 返回上一页
    */
   goBack() {
-    console.log('[开口笑结果页] 返回上一页')
-    wx.navigateBack({
-      delta: 1
-    })
+    console.log('[开口笑结果页] 返回上一页 - 触发')
+    
+    // 获取当前页面栈
+    const pages = getCurrentPages()
+    console.log('[开口笑结果页] 当前页面栈长度:', pages.length)
+    
+    if (pages.length > 1) {
+      wx.showToast({
+        title: '返回中...',
+        icon: 'none',
+        duration: 500
+      })
+      setTimeout(() => {
+        wx.navigateBack({
+          delta: 1,
+          fail: (err) => {
+            console.error('[开口笑结果页] 返回失败:', err)
+            // 如果navigateBack失败,尝试回到首页
+            wx.switchTab({
+              url: '/pages/index/index'
+            })
+          }
+        })
+      }, 300)
+    } else {
+      console.log('[开口笑结果页] 没有上一页,返回首页')
+      wx.showToast({
+        title: '返回首页...',
+        icon: 'none',
+        duration: 500
+      })
+      setTimeout(() => {
+        wx.switchTab({
+          url: '/pages/index/index'
+        })
+      }, 300)
+    }
   },
 
   /**

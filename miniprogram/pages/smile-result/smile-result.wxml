@@ -1,5 +1,40 @@
 <!-- 开口笑图片结果页面 -->
-<view class="smile-result-container">
+<view class="container">
+  <!-- 自定义导航栏 -->
+  <view class="custom-navbar" style="padding-top: {{statusBarHeight}}px;">
+    <view class="navbar-content">
+      <view class="back-btn" catchtap="goBack">
+        <text class="back-icon">❮</text>
+      </view>
+      <view class="navbar-title">开口笑结果</view>
+      <view class="navbar-placeholder"></view>
+    </view>
+  </view>
+
+  <!-- 背景视频 -->
+  <video
+    wx:if="{{showBackgroundVideo && backgroundVideoUrl}}"
+    class="background-video"
+    src="{{backgroundVideoUrl}}"
+    autoplay
+    loop
+    muted
+    show-center-play-btn="{{false}}"
+    show-play-btn="{{false}}"
+    show-fullscreen-btn="{{false}}"
+    controls="{{false}}"
+    objectFit="cover"
+    binderror="onBackgroundVideoError"
+    bindplay="onBackgroundVideoPlay"
+  ></video>
+
+  <!-- 加载提示 -->
+  <view wx:if="{{!showBackgroundVideo && backgroundVideoLoading}}" class="video-loading">
+    <text>背景加载中...</text>
+  </view>
+
+  <!-- 内容层 -->
+  <view class="content-wrapper" style="padding-top: {{navigationBarHeight}}px;">
   <!-- 顶部状态栏 -->
   <view class="status-header">
     <view class="success-badge">
@@ -111,5 +146,6 @@
       <text class="tip-item">• 支持直接分享到微信好友和朋友圈</text>
       <text class="tip-item">• 可以用不同照片生成更多有趣效果</text>
     </view>
+  </view>
   </view>
 </view>
