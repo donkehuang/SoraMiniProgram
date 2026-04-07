@@ -3047,10 +3047,10 @@ Page({
       let finalPrompt
       if (davinciImageUrl) {
         // 有参考图片时,强调基于图片的风格转换
-        finalPrompt = `Convert this image to ${basePrompt}${subStylePrompt}. ${davinciText}. Maintain the original composition and subject matter while applying the artistic style transformation. High quality, professional artwork.`
+        finalPrompt = `Apply ${basePrompt}${subStylePrompt} artistic style to the image. ${davinciText}. Maintain composition.`
       } else {
         // 没有参考图片时,生成新图片
-        finalPrompt = `${davinciText} ${basePrompt}${subStylePrompt}, high quality, artistic masterpiece`
+        finalPrompt = `${davinciText} ${basePrompt}${subStylePrompt}`
       }
 
       console.log('[达芬奇] 生成提示词:', finalPrompt)
