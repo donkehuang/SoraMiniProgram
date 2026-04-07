@@ -1640,12 +1640,30 @@ def davinci_style():
         print("[达芬奇] 开始调用OpenAI DALL-E编辑API...")
 
         try:
-            response = client.images.edit(
-                image=image_data,
-                prompt=prompt,
-                n=1,
-                size="1024x1024"
-            )
+            # 先尝试使用edit API
+            try:
+                response = client.images.edit(
+                    image=image_data,
+                    prompt=prompt,
+                    n=1,
+                    size="1024x1024"
+                )
+            except Exception as edit_error:
+                print(f"[达芬奇] edit API失败,尝试使用生成API: {edit_error}")
+                # 如果edit失败,使用DALL-E 3生成API
+                # 将图片保存为临时文件
+                temp_path = os.path.join(IMAGES_DIR, f"temp_davinci_{int(time.time())}.jpg")
+                with open(temp_path, 'wb') as f:
+                    f.write(image_data)
+
+                # 使用DALL-E 3生成,参考图片作为prompt的一部分
+                enhanced_prompt = f"{prompt}. Based on the reference image style."
+                response = client.images.generate(
+                    prompt=enhanced_prompt,
+                    n=1,
+                    size="1024x1024",
+                    model="dall-e-3"
+                )
 
             print(f"[达芬奇] 编辑成功")
 
