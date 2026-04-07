@@ -3016,25 +3016,25 @@ Page({
       // 定义风格提示词配置（直接内联）
       const davinciStylePrompts = {
         'oil': {
-          'base': 'Oil painting style, classic brushstrokes, rich colors, canvas texture',
-          'impressionism': ', Claude Monet impressionist style, soft colors, light effects, visible brushwork',
-          'van-gogh': ', Vincent van Gogh style, bold brushstrokes, swirling patterns, vibrant colors',
-          'renaissance': ', Renaissance oil painting style, sfumato technique, classical composition',
-          'portrait': ', classical portrait oil painting, chiaroscuro lighting, smooth skin tones'
+          'base': 'oil painting',
+          'impressionism': ', impressionist style',
+          'van-gogh': ', van Gogh style',
+          'renaissance': ', renaissance style',
+          'portrait': ', portrait painting'
         },
         'pencil': {
-          'base': 'Pencil drawing, graphite, sketch lines, shading',
-          'sketch': ', quick pencil sketch, loose lines, gestural drawing',
-          'detailed': ', detailed pencil drawing, fine lines, precise shading',
-          'charcoal': ', charcoal drawing, rough texture, smudged effects',
-          'cross-hatch': ', pencil drawing with cross-hatching technique, precise lines'
+          'base': 'pencil drawing',
+          'sketch': ', sketch style',
+          'detailed': ', detailed drawing',
+          'charcoal': ', charcoal drawing',
+          'cross-hatch': ', cross-hatch technique'
         },
         'ink': {
-          'base': 'Traditional Chinese ink painting, black ink, white paper, brush strokes',
-          'mountain-water': ', Chinese landscape painting (Shan Shui), misty mountains, flowing water',
-          'flower-bird': ', Chinese flower and bird painting, delicate brushwork, elegant composition',
-          'figure': ', Chinese figure painting, calligraphic lines, expressive gesture',
-          'free-style': ', Xieyi style freehand painting, bold brushwork, spontaneous expression'
+          'base': 'ink painting',
+          'mountain-water': ', landscape painting',
+          'flower-bird': ', flower and bird painting',
+          'figure': ', figure painting',
+          'free-style': ', freehand painting'
         }
       }
 
@@ -3046,8 +3046,9 @@ Page({
       // 根据是否有参考图片构建不同的提示词
       let finalPrompt
       if (davinciImageUrl) {
-        // 有参考图片时,强调基于图片的风格转换
-        finalPrompt = `Apply ${basePrompt}${subStylePrompt} artistic style to the image. ${davinciText}. Maintain composition.`
+        // 有参考图片时,prompt只描述用户输入的内容和风格
+        // edit API会处理参考图片
+        finalPrompt = `${davinciText} ${basePrompt}${subStylePrompt}`
       } else {
         // 没有参考图片时,生成新图片
         finalPrompt = `${davinciText} ${basePrompt}${subStylePrompt}`
