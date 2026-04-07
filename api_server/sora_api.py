@@ -1612,45 +1612,60 @@ def davinci_style():
 
         print(f"[达芬奇] 图片大小: {len(image_data)} 字节")
 
-        # 检查图片大小,OpenAI限制最大4MB
-        if len(image_data) > 4 * 1024 * 1024:
-            print("[达芬奇] 图片过大,进行压缩...")
-            # 压缩图片
-            from io import BytesIO
-            from PIL import Image
-
-            img = Image.open(BytesIO(image_data))
-
-            # 转换为RGB模式(去除透明通道)
-            if img.mode in ('RGBA', 'LA', 'P'):
-                img = img.convert('RGB')
-
-            # 调整大小,确保不超过1024x1024
-            max_size = 1024
-            if img.size[0] > max_size or img.size[1] > max_size:
-                img.thumbnail((max_size, max_size), Image.LANCZOS)
-
-            # 保存为JPEG以减小体积
-            output = BytesIO()
-            img.save(output, format='JPEG', quality=85)
-            image_data = output.getvalue()
-            print(f"[达芬奇] 压缩后图片大小: {len(image_data)} 字节")
-
-        # 调用OpenAI DALL-E编辑API (只有edit API才能基于参考图片)
-        print("[达芬奇] 开始调用OpenAI DALL-E编辑API...")
-
-        response = None
+        # 1. 使用Vision API分析图片,获取详细描述
+        print("[达芬奇] 使用Vision API分析图片...")
 
         try:
-            # 使用edit API (这是唯一能基于参考图片的API)
-            print("[达芬奇] 调用edit API...")
-            response = client.images.edit(
-                image=image_data,
-                prompt=prompt,
-                n=1,
-                size="1024x1024"
+            # 将图片编码为base64
+            import base64
+            image_b64 = base64.b64encode(image_data).decode('utf-8')
+
+            # 调用Vision API
+            vision_response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "请详细描述这张图片的内容,包括主要主体、构图、颜色、场景、人物、物体等所有细节。用英文描述,约150-200字。"
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{image_b64}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=500
             )
-            print(f"[达芬奇] edit API调用成功")
+
+            image_description = vision_response.choices[0].message.content.strip()
+            print(f"[达芬奇] 图片描述: {image_description[:100]}...")
+
+        except Exception as vision_error:
+            print(f"[达芬奇] Vision API失败: {vision_error}")
+            # 如果Vision失败,使用简单描述
+            image_description = "A scene with main elements from the uploaded image"
+
+        # 构建最终的prompt
+        final_prompt = f"{image_description} {prompt}"
+        print(f"[达芬奇] 最终prompt: {final_prompt[:150]}...")
+
+        # 2. 使用DALL-E 3生成图片
+        print("[达芬奇] 使用DALL-E 3生成API...")
+
+        try:
+            response = client.images.generate(
+                prompt=final_prompt,
+                n=1,
+                size="1024x1024",
+                model="dall-e-3"
+            )
+            print(f"[达芬奇] DALL-E 3生成API调用成功")
 
             if not response or not response.data or len(response.data) == 0:
                 raise Exception("API返回的数据为空")
