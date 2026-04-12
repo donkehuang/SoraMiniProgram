@@ -402,11 +402,14 @@ def generate_video():
         prompt = data.get('prompt', '')
         seconds = data.get('seconds', '12')
         size = data.get('size', '1280x720')
-        image_url = data.get('imageUrl', '')  # 可选：参考图片URL
+        image_url = data.get('imageUrl', '')  # 可选：参考图片URL（兼容旧版）
+        input_image = data.get('input_image', '')  # 可选：输入图片URL（宠物说话等）
 
         print(f"[参数] prompt: {prompt[:50]}..., seconds: {seconds}, size: {size}")
         if image_url:
             print(f"[参数] 参考图片: {image_url}")
+        if input_image:
+            print(f"[参数] 输入图片: {input_image}")
 
         if not prompt:
             print("[错误] prompt为空")

@@ -2671,7 +2671,7 @@ Page({
     })
   },
 
-  // 生成宠物说话视频
+  // 生成宠物说话图片
   async generatePetTalkImage() {
     const { petDialogue, petImageUrl, apiBaseUrl } = this.data
 
@@ -2715,25 +2715,23 @@ Page({
 
       console.log('[宠物说话] 宠物照片上传成功:', inputImageUploadResult.fileID)
 
-      // 构建生成视频的提示词
+      // 构建生成图片的提示词
       // 明确说明不要生成字幕和中文提示框，避免中文乱码
-      const videoPrompt = `A pet performing the action: ${finalDialogue}. The pet should be lively and animated. Do NOT generate any text, subtitles, or speech bubbles. The video should be natural without any text overlays. High quality, realistic style, smooth animation, 4 seconds duration.`
+      const imagePrompt = `A cute and lively pet (cat or dog) performing the action: ${finalDialogue}. The pet should look happy and playful, with good lighting and high quality. Realistic photography style, sharp details, natural expression. Do NOT generate any text, subtitles, or speech bubbles. No text overlays.`
 
       this.setData({
         generationProgress: 30,
-        statusText: '正在生成视频...'
+        statusText: '正在生成图片...'
       })
 
-      // 调用Sora视频生成API
+      // 调用图片生成API
       const generateRequest = await new Promise((resolve, reject) => {
         wx.request({
-          url: `${apiBaseUrl}/api/generate-video`,
+          url: `${apiBaseUrl}/api/generate-image`,
           method: 'POST',
           data: {
-            prompt: videoPrompt,
-            input_image: inputImageUploadResult.tempFileURL || inputImageUploadResult.fileID,
-            duration: 4,
-            size: '1280x720'
+            prompt: imagePrompt,
+            orientation: 'horizontal'
           },
           header: {
             'content-type': 'application/json'
@@ -2744,19 +2742,54 @@ Page({
       })
 
       if (!generateRequest.data || !generateRequest.data.success) {
-        throw new Error(generateRequest.data?.error || '生成视频失败')
+        throw new Error(generateRequest.data?.error || '生成图片失败')
       }
 
-      const videoId = generateRequest.data.videoId
-      console.log('[宠物说话] 视频生成请求成功，videoId:', videoId)
+      const imageUrl = generateRequest.data.imageUrl
+      console.log('[宠物说话] 图片生成成功:', imageUrl)
 
       this.setData({
-        generationProgress: 50,
-        statusText: '视频生成中...'
+        generationProgress: 70,
+        statusText: '正在下载图片...'
       })
 
-      // 轮询视频生成状态
-      await this.pollPetTalkVideoStatus(videoId, apiBaseUrl, inputImageUploadResult.fileID, finalDialogue)
+      // 下载图片到本地
+      const localPath = await this.downloadImageToLocal(imageUrl, apiBaseUrl)
+
+      this.setData({
+        generationProgress: 90,
+        statusText: '正在上传到云存储...'
+      })
+
+      // 上传到云存储
+      const cloudPath = `pet_images/${timestamp}.png`
+      const uploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
+
+      // 保存到数据库
+      await this.savePetTalkImageToDatabase(uploadResult, timestamp, finalDialogue)
+
+      this.setData({
+        isGenerating: false,
+        generationProgress: 100,
+        statusText: '生成完成！',
+        errorMessage: ''
+      })
+
+      console.log('[宠物说话] 完整流程完成')
+
+      // 显示成功提示
+      wx.showToast({
+        title: '生成成功！',
+        icon: 'success',
+        duration: 2000
+      })
+
+      // 跳转到作品页面
+      setTimeout(() => {
+        wx.switchTab({
+          url: '/pages/works/works'
+        })
+      }, 1000)
 
     } catch (error) {
       console.error('[宠物说话] 生成失败:', error)
@@ -2775,6 +2808,11 @@ Page({
 
   // 轮询宠物说话视频状态
   async pollPetTalkVideoStatus(videoId, apiBaseUrl, inputImageFileID, dialogue) {
+    // 设置当前视频ID，用于中断轮询
+    this.setData({
+      currentVideoId: videoId
+    })
+
     const pollInterval = 3000
 
     const poll = async () => {
@@ -2794,6 +2832,8 @@ Page({
 
         const status = res.data.status
         const progress = res.data.progress
+
+        console.log(`[宠物说话] 状态查询结果: status=${status}, progress=${progress}%`)
 
         const actualProgress = 70 + (progress * 0.25)  // 70%-95%
         const statusMap = {

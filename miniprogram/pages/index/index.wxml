@@ -76,7 +76,7 @@
           <view class="function-overlay"></view>
           <view class="function-content">
             <view class="function-title">宠物开口说话</view>
-            <view class="function-desc">上传照片+生成搞笑行为视频</view>
+            <view class="function-desc">上传照片+生成搞笑行为图片</view>
           </view>
           <view class="function-arrow">→</view>
         </view>
@@ -385,13 +385,13 @@
 
           <!-- 提示文字 -->
           <view class="hint-text">
-            <text>💡 宠物的行为将通过AI视频生成技术呈现</text>
+            <text>💡 宠物的行为将通过AI图片生成技术呈现</text>
           </view>
         </view>
 
         <!-- 生成按钮 -->
         <button class="generate-btn" bindtap="generatePetTalkImage" disabled="{{!petImageUrl}}">
-          生成宠物说话视频
+          生成宠物说话图片
         </button>
     </view>
 
