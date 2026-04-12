@@ -139,28 +139,29 @@ print(f"[配置] 超时时间: {client.timeout}秒")
 def edit_image_with_openai(image_path, prompt):
     """使用OpenAI images.edit接口编辑图片"""
     try:
-        # 读取图片
+        # 使用文件对象直接传入，OpenAI SDK会自动处理MIME类型
         with open(image_path, 'rb') as f:
-            image_file = f.read()
-
-        # 调用images.edit接口
-        response = client.images.edit(
-            model="gpt-image-1.5",
-            image=image_file,
-            prompt=prompt
-        )
+            response = client.images.edit(
+                model="gpt-image-1.5",
+                image=[f],
+                prompt=prompt
+            )
 
         # 获取生成的图片base64
         image_b64 = response.data[0].b64_json
+        print(f"[图片编辑] 图片base64长度: {len(image_b64)} 字符")
 
         # 解码base64为bytes
         image_bytes = base64.b64decode(image_b64)
+        print(f"[图片编辑] 解码后大小: {len(image_bytes)} 字节")
 
         print(f"[图片编辑] 编辑成功")
         return image_bytes
 
     except Exception as e:
         print(f"[图片编辑] 编辑失败: {e}")
+        import traceback
+        traceback.print_exc()
         raise e
 
 def process_video_async(video_id, local_filename):
