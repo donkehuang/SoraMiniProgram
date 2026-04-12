@@ -1489,13 +1489,8 @@ def enhance_upscale():
 
             img_b64 = base64.b64encode(img_data).decode()
 
-            # 使用DALL-E编辑
-            response = client.images.edit(
-                image=base64.b64decode(img_b64),
-                prompt=upscale_prompt,
-                n=1,
-                size="1024x1024"
-            )
+            # 使用通用编辑函数
+            upscaled_image_bytes = edit_image_with_openai(temp_input_path, upscale_prompt)
 
             print(f"[成功] 高清修复完成")
 
