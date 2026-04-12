@@ -544,8 +544,31 @@ Page({
           console.log('[下载] 临时文件路径:', res.tempFilePath)
 
           if (res.statusCode === 200 && res.tempFilePath) {
-            // 检查tempFilePath是否是本地路径
-            if (res.tempFilePath.startsWith('http') || res.tempFilePath.startsWith('wxfile://')) {
+            // 在某些环境下（特别是开发者工具），tempFilePath可能是 http://tmp/... 格式
+            // 需要再次下载以获取真正的本地路径
+            if (res.tempFilePath.startsWith('http://tmp/')) {
+              console.log('[下载] 检测到HTTP格式的临时路径，需要再次下载')
+              wx.downloadFile({
+                url: res.tempFilePath,
+                timeout: 30000,
+                success: (res2) => {
+                  if (res2.statusCode === 200 && res2.tempFilePath) {
+                    console.log('[下载] 二次下载成功:', res2.tempFilePath)
+                    resolve(res2.tempFilePath)
+                  } else {
+                    reject(new Error('二次下载失败'))
+                  }
+                },
+                fail: (err) => {
+                  console.error('[下载] 二次下载失败:', err)
+                  reject(new Error('二次下载失败'))
+                }
+              })
+              return
+            }
+
+            // 检查tempFilePath是否是其他HTTP格式
+            if (res.tempFilePath.startsWith('http') && !res.tempFilePath.startsWith('http://tmp/')) {
               console.error('[下载] ❌ 临时文件路径格式异常:', res.tempFilePath)
               reject(new Error('下载的文件路径格式异常'))
               return
