@@ -57,12 +57,37 @@ Page({
 
       console.log('[作品] 云函数返回视频:', res.result.data.length, '条')
 
+      // 获取所有 fileID
+      const fileIDs = res.result.data.map(item => item.fileID).filter(id => id)
+
+      // 批量获取新的临时链接
+      let urlMap = {}
+      if (fileIDs.length > 0) {
+        console.log('[作品] 刷新视频临时链接...')
+        try {
+          const urlRes = await wx.cloud.getTempFileURL({
+            fileList: fileIDs
+          })
+
+          // 创建 fileID -> tempURL 的映射
+          urlRes.fileList.forEach(file => {
+            if (file.status === 0 && file.tempFileURL) {
+              urlMap[file.fileID] = file.tempFileURL
+            } else {
+              console.warn('[作品] fileID获取URL失败:', file.fileID, file.errMsg)
+            }
+          })
+        } catch (urlError) {
+          console.error('[作品] 刷新临时链接失败:', urlError)
+        }
+      }
+
       // 格式化视频数据
       const videos = res.result.data.map(item => ({
         _id: item._id,
         videoId: item.videoId,
         fileID: item.fileID,
-        httpURL: item.tempFileURL || item.httpURL,
+        httpURL: urlMap[item.fileID] || item.tempFileURL || item.httpURL,
         name: item.prompt ? item.prompt.substring(0, 50) + (item.prompt.length > 50 ? '...' : '') : '视频作品',
         prompt: item.prompt || '',
         date: item.date || new Date(item.timestamp).toLocaleDateString(),
@@ -105,24 +130,36 @@ Page({
 
       // 批量获取新的临时链接
       console.log('[作品] 刷新图片临时链接...')
-      const urlRes = await wx.cloud.getTempFileURL({
-        fileList: fileIDs
-      })
+      let urlMap = {}
 
-      // 创建 fileID -> tempURL 的映射
-      const urlMap = {}
-      urlRes.fileList.forEach(file => {
-        urlMap[file.fileID] = file.tempFileURL
-      })
+      try {
+        const urlRes = await wx.cloud.getTempFileURL({
+          fileList: fileIDs
+        })
+
+        // 创建 fileID -> tempURL 的映射
+        urlRes.fileList.forEach(file => {
+          if (file.status === 0 && file.tempFileURL) {
+            urlMap[file.fileID] = file.tempFileURL
+          } else {
+            console.warn('[作品] fileID获取URL失败:', file.fileID, file.errMsg)
+          }
+        })
+      } catch (urlError) {
+        console.error('[作品] 刷新临时链接失败:', urlError)
+        // 继续使用数据库中的httpURL
+      }
 
       // 格式化图片数据
       const images = res.data.map(item => ({
         _id: item._id,
         fileID: item.fileID,
         httpURL: urlMap[item.fileID] || item.httpURL,
-        name: item.text ? item.text.substring(0, 50) + (item.text.length > 50 ? '...' : '') : '图片作品',
-        text: item.text || '',
+        name: item.dialogue ? item.dialogue.substring(0, 50) + (item.dialogue.length > 50 ? '...' : '') : (item.text ? item.text.substring(0, 50) + (item.text.length > 50 ? '...' : '') : '图片作品'),
+        text: item.text || item.dialogue || '',
+        dialogue: item.dialogue || '',
         style: item.style || '',
+        type: item.type || '',
         date: item.date || new Date(item.timestamp).toLocaleDateString(),
         createTime: item.createTime
       }))
@@ -162,15 +199,25 @@ Page({
 
       // 批量获取新的临时链接
       console.log('[作品] 刷新临时链接...')
-      const urlRes = await wx.cloud.getTempFileURL({
-        fileList: fileIDs
-      })
+      let urlMap = {}
 
-      // 创建 fileID -> tempURL 的映射
-      const urlMap = {}
-      urlRes.fileList.forEach(file => {
-        urlMap[file.fileID] = file.tempFileURL
-      })
+      try {
+        const urlRes = await wx.cloud.getTempFileURL({
+          fileList: fileIDs
+        })
+
+        // 创建 fileID -> tempURL 的映射
+        urlRes.fileList.forEach(file => {
+          if (file.status === 0 && file.tempFileURL) {
+            urlMap[file.fileID] = file.tempFileURL
+          } else {
+            console.warn('[作品] fileID获取URL失败:', file.fileID, file.errMsg)
+          }
+        })
+      } catch (urlError) {
+        console.error('[作品] 刷新临时链接失败:', urlError)
+        // 继续使用数据库中的httpURL
+      }
 
       // 格式化视频数据，使用新的临时链接
       const videos = res.data.map(item => ({

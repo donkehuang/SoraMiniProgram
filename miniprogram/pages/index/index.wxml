@@ -76,7 +76,7 @@
           <view class="function-overlay"></view>
           <view class="function-content">
             <view class="function-title">宠物开口说话</view>
-            <view class="function-desc">搞笑台词+趣味图片</view>
+            <view class="function-desc">上传照片+生成搞笑行为视频</view>
           </view>
           <view class="function-arrow">→</view>
         </view>
@@ -343,33 +343,56 @@
         <text class="back-text">返回</text>
       </view>
 
-      <!-- 台词输入区域 -->
-      <view class="input-section">
-        <view class="input-label">
-          <text class="label-icon">💬</text>
-          <text class="label-text">想让宠物说的话</text>
+      <!-- 上传宠物照片 -->
+      <view class="upload-section">
+        <view class="upload-label">
+          <text class="label-icon">🐾</text>
+          <text class="label-text">上传宠物照片</text>
         </view>
-        <textarea
-          class="prompt-input"
-          placeholder="不输入将随机生成搞笑台词"
-          value="{{petDialogue}}"
-          bindinput="onPetDialogueInput"
-          maxlength="100"
-          auto-height
-        />
-        <text class="char-count">{{petDialogue.length}}/100</text>
-
-        <!-- 随机台词按钮 -->
-        <button class="random-dialogue-btn" bindtap="generateRandomDialogue">
-          <text class="random-icon">🎲</text>
-          <text>随机生成搞笑台词</text>
-        </button>
+        <view class="upload-area">
+          <image class="preview-image" wx:if="{{petImageUrl}}" src="{{petImageUrl}}" mode="aspectFill"></image>
+          <view class="upload-placeholder" wx:else bindtap="choosePetImage">
+            <text class="upload-icon">📷</text>
+            <text class="upload-text">点击上传宠物照片</text>
+          </view>
+          <view class="change-image-btn" wx:if="{{petImageUrl}}" bindtap="choosePetImage">
+            <text>更换照片</text>
+          </view>
+        </view>
       </view>
 
-      <!-- 生成按钮 -->
-      <button class="generate-btn" bindtap="generatePetTalkImage">
-        生成宠物说话图片
-      </button>
+        <!-- 宠物行为描述输入区域 -->
+        <view class="input-section">
+          <view class="input-label">
+            <text class="label-icon">🎬</text>
+            <text class="label-text">希望宠物做的事情</text>
+          </view>
+          <textarea
+            class="prompt-input"
+            placeholder="不输入将随机生成搞笑行为"
+            value="{{petDialogue}}"
+            bindinput="onPetDialogueInput"
+            maxlength="100"
+            auto-height
+          />
+          <text class="char-count">{{petDialogue.length}}/100</text>
+
+          <!-- 随机行为按钮 -->
+          <button class="random-dialogue-btn" bindtap="generateRandomDialogue">
+            <text class="random-icon">🎲</text>
+            <text>随机生成搞笑行为</text>
+          </button>
+
+          <!-- 提示文字 -->
+          <view class="hint-text">
+            <text>💡 宠物的行为将通过AI视频生成技术呈现</text>
+          </view>
+        </view>
+
+        <!-- 生成按钮 -->
+        <button class="generate-btn" bindtap="generatePetTalkImage" disabled="{{!petImageUrl}}">
+          生成宠物说话视频
+        </button>
     </view>
 
     <!-- 我是达芬奇界面 -->

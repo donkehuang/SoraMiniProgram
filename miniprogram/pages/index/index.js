@@ -55,28 +55,28 @@ Page({
     selectedDavinciSubStyle: '',  // 选中的子风格
     davinciSubStyles: [],  // 子风格列表
 
-    // 随机搞笑台词库
+    // 随机搞笑宠物行为库
     funnyDialogues: [
-      "铲屎的，今天的罐头呢？",
-      "你今天加班了？我不接受这个解释",
-      "猫粮品牌换了？你死定了",
-      "再摸我尾巴试试",
-      "这就是你花几千块买的猫窝？我更喜欢快递箱",
-      "你又偷偷吃了我的零食",
-      "现在是凌晨3点，该醒醒铲屎了",
-      "我决定了，明天开始减肥...大概",
-      "你看我眼里的意思是'我想吃'不是'真可爱'",
-      "那只鸟又在挑衅我，我要出去了",
-      "你的键盘为什么这么暖和？",
-      "今天的阳光很舒服，让我再睡5小时",
-      "你回来了？先把罐头放下再说话",
-      "我刚刚梦见你给我开了10个罐头",
-      "为什么那只猫可以有猫爬架？",
-      "你今天又去哪浪了？",
-      "新买的逗猫棒在哪？快点拿出来",
-      "我允许你摸我3秒钟...好了时间到",
-      "我的水又没换？你等着",
-      "今天的阳光很好，适合在窗台发呆"
+      "在键盘上打字，发送乱码",
+      "把桌上的杯子推到地上",
+      "追逐激光笔的光点",
+      "在快递箱里睡觉",
+      "对着空气突然疯狂奔跑",
+      "偷吃桌上的食物",
+      "在沙发上磨爪子",
+      "在窗帘上爬来爬去",
+      "对着镜子叫",
+      "追着自己的尾巴转圈",
+      "把毛线球弄得到处都是",
+      "在花盆里挖土",
+      "对着电视里的动物叫",
+      "在人上厕所时扒门",
+      "在刚拖好的地上留下脚印",
+      "偷偷钻进洗衣机里",
+      "在床上滚来滚去",
+      "把玩具藏在沙发底下",
+      "对着窗外的小鸟叫",
+      "在人的脚边蹭来蹭去"
     ],
 
     // 预设prompt风格
@@ -567,11 +567,28 @@ Page({
               return
             }
 
-            // 检查tempFilePath是否是其他HTTP格式
-            if (res.tempFilePath.startsWith('http') && !res.tempFilePath.startsWith('http://tmp/')) {
-              console.error('[下载] ❌ 临时文件路径格式异常:', res.tempFilePath)
-              reject(new Error('下载的文件路径格式异常'))
-              return
+            // 检查tempFilePath是否是HTTP格式，需要重新下载
+            if (res.tempFilePath.startsWith('http')) {
+              if (!res.tempFilePath.startsWith('http://tmp/')) {
+                console.log('[下载] 检测到HTTP格式的临时路径，尝试再次下载:', res.tempFilePath)
+                wx.downloadFile({
+                  url: res.tempFilePath,
+                  timeout: 30000,
+                  success: (res2) => {
+                    if (res2.statusCode === 200 && res2.tempFilePath) {
+                      console.log('[下载] 再次下载成功:', res2.tempFilePath)
+                      resolve(res2.tempFilePath)
+                    } else {
+                      reject(new Error('再次下载失败'))
+                    }
+                  },
+                  fail: (err) => {
+                    console.error('[下载] 再次下载失败:', err)
+                    reject(new Error('再次下载失败'))
+                  }
+                })
+                return
+              }
             }
 
             // 使用getFileInfo获取实际的文件大小
@@ -2636,27 +2653,27 @@ Page({
     })
   },
 
-  // 随机生成搞笑台词
+  // 随机生成搞笑行为
   generateRandomDialogue() {
     const dialogues = this.data.funnyDialogues
     const randomIndex = Math.floor(Math.random() * dialogues.length)
     const randomDialogue = dialogues[randomIndex]
 
-    console.log('[宠物说话] 随机台词:', randomDialogue)
+    console.log('[宠物说话] 随机行为:', randomDialogue)
 
     this.setData({
       petDialogue: randomDialogue
     })
 
     wx.showToast({
-      title: '已生成随机台词',
+      title: '已生成随机行为',
       icon: 'success'
     })
   },
 
-  // 生成宠物说话图片
+  // 生成宠物说话视频
   async generatePetTalkImage() {
-    const { petDialogue, apiBaseUrl } = this.data
+    const { petDialogue, petImageUrl, apiBaseUrl } = this.data
 
     // 检查登录状态
     const isLoggedIn = await this.checkLoginState()
@@ -2664,10 +2681,19 @@ Page({
       return
     }
 
-    // 如果没有输入台词，随机生成
+    // 检查是否上传了宠物照片
+    if (!petImageUrl) {
+      wx.showToast({
+        title: '请先上传宠物照片',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 如果没有输入行为描述，随机生成
     const finalDialogue = petDialogue.trim() || this.data.funnyDialogues[Math.floor(Math.random() * this.data.funnyDialogues.length)]
 
-    console.log('[宠物说话] 使用台词:', finalDialogue)
+    console.log('[宠物说话] 使用行为描述:', finalDialogue)
 
     this.setData({
       errorMessage: '',
@@ -2677,24 +2703,37 @@ Page({
     })
 
     try {
-      // 生成宠物说话图片
+      // 上传宠物照片到云存储
       this.setData({
-        generationProgress: 30,
-        statusText: '正在生成图片...'
+        generationProgress: 20,
+        statusText: '正在上传宠物照片...'
       })
 
       const timestamp = Date.now()
+      const inputImageCloudPath = `pet_input_images/${timestamp}.png`
+      const inputImageUploadResult = await cloudStorage.uploadFile(petImageUrl, inputImageCloudPath)
 
-      // 构建生成图片的提示词
-      const firstFramePrompt = `A cute pet (cat or dog) with a speech bubble containing Chinese text "${finalDialogue}", the pet is looking at the camera with a cute expression, warm and cozy lighting, high quality, realistic style`
+      console.log('[宠物说话] 宠物照片上传成功:', inputImageUploadResult.fileID)
 
-      const firstFrameRequest = await new Promise((resolve, reject) => {
+      // 构建生成视频的提示词
+      // 明确说明不要生成字幕和中文提示框，避免中文乱码
+      const videoPrompt = `A pet performing the action: ${finalDialogue}. The pet should be lively and animated. Do NOT generate any text, subtitles, or speech bubbles. The video should be natural without any text overlays. High quality, realistic style, smooth animation, 4 seconds duration.`
+
+      this.setData({
+        generationProgress: 30,
+        statusText: '正在生成视频...'
+      })
+
+      // 调用Sora视频生成API
+      const generateRequest = await new Promise((resolve, reject) => {
         wx.request({
-          url: `${apiBaseUrl}/api/generate-image`,
+          url: `${apiBaseUrl}/api/generate-video`,
           method: 'POST',
           data: {
-            prompt: firstFramePrompt,
-            orientation: 'horizontal'
+            prompt: videoPrompt,
+            input_image: inputImageUploadResult.tempFileURL || inputImageUploadResult.fileID,
+            duration: 4,
+            size: '1280x720'
           },
           header: {
             'content-type': 'application/json'
@@ -2704,32 +2743,20 @@ Page({
         })
       })
 
-      if (!firstFrameRequest.data || !firstFrameRequest.data.success) {
-        throw new Error(firstFrameRequest.data?.error || '生成首帧失败')
+      if (!generateRequest.data || !generateRequest.data.success) {
+        throw new Error(generateRequest.data?.error || '生成视频失败')
       }
 
-      const firstFrameUrl = firstFrameRequest.data.imageUrl
-      console.log('[宠物说话] 图片生成成功:', firstFrameUrl)
+      const videoId = generateRequest.data.videoId
+      console.log('[宠物说话] 视频生成请求成功，videoId:', videoId)
 
       this.setData({
-        generationProgress: 70,
-        statusText: '正在下载图片...'
+        generationProgress: 50,
+        statusText: '视频生成中...'
       })
 
-      // 下载图片到本地
-      const localPath = await this.downloadImageToLocal(firstFrameUrl, apiBaseUrl)
-
-      this.setData({
-        generationProgress: 90,
-        statusText: '正在上传到云存储...'
-      })
-
-      // 上传到云存储
-      const cloudPath = `pet_images/${timestamp}.png`
-      const resultUploadResult = await cloudStorage.uploadFile(localPath, cloudPath)
-
-      // 保存到数据库
-      await this.savePetTalkImageToDatabase(resultUploadResult, timestamp, finalDialogue)
+      // 轮询视频生成状态
+      await this.pollPetTalkVideoStatus(videoId, apiBaseUrl, inputImageUploadResult.fileID, finalDialogue)
 
     } catch (error) {
       console.error('[宠物说话] 生成失败:', error)
