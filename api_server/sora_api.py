@@ -136,6 +136,33 @@ print(f"[配置] OpenAI客户端已初始化")
 print(f"[配置] API基础URL: {client.base_url}")
 print(f"[配置] 超时时间: {client.timeout}秒")
 
+def edit_image_with_openai(image_path, prompt):
+    """使用OpenAI images.edit接口编辑图片"""
+    try:
+        # 读取图片
+        with open(image_path, 'rb') as f:
+            image_file = f.read()
+
+        # 调用images.edit接口
+        response = client.images.edit(
+            model="gpt-image-1.5",
+            image=image_file,
+            prompt=prompt
+        )
+
+        # 获取生成的图片base64
+        image_b64 = response.data[0].b64_json
+
+        # 解码base64为bytes
+        image_bytes = base64.b64decode(image_b64)
+
+        print(f"[图片编辑] 编辑成功")
+        return image_bytes
+
+    except Exception as e:
+        print(f"[图片编辑] 编辑失败: {e}")
+        raise e
+
 def process_video_async(video_id, local_filename):
     """异步处理视频生成和下载"""
     try:
@@ -1626,129 +1653,32 @@ def davinci_style():
 
         print(f"[达芬奇] 图片大小: {len(image_data)} 字节")
 
-        # 1. 使用Vision API分析图片,获取详细描述 (优先使用Kimi)
-        print("[达芬奇] 使用Vision API分析图片...")
+        # 1. 保存图片到临时文件
+        print("[达芬奇] 保存图片到临时文件...")
+
+        timestamp = int(time.time())
+        temp_input_path = os.path.join(IMAGES_DIR, f"davinci_input_{timestamp}.png")
+
+        with open(temp_input_path, 'wb') as f:
+            f.write(image_data)
+
+        print(f"[达芬奇] 临时文件已保存: {temp_input_path}")
+
+        # 2. 使用edit_image_with_openai函数编辑图片
+        print("[达芬奇] 使用edit_image_with_openai编辑图片...")
 
         try:
-            # 将图片编码为base64
-            import base64
-            image_b64 = base64.b64encode(image_data).decode('utf-8')
-            image_url = f"data:image/png;base64,{image_b64}"
+            # 使用请求中的prompt作为编辑指令
+            edited_image_bytes = edit_image_with_openai(temp_input_path, prompt)
 
-            # 优先使用Kimi Vision API
-            if kimi_client:
-                print("[达芬奇] 使用Kimi Vision API...")
-                vision_response = kimi_client.chat.completions.create(
-                    model="kimi-k2.5",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "你是 Kimi，由 Moonshot AI 提供的人工智能助手。"
-                        },
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": image_url
-                                    }
-                                },
-                                {
-                                    "type": "text",
-                                    "text": "请详细描述这张图片的内容,包括主要主体、构图、颜色、场景、人物、物体等所有细节。用英文描述,约150-200字。"
-                                }
-                            ]
-                        }
-                    ],
-                    temperature=0.3,
-                    max_tokens=500
-                )
-            else:
-                # 回退到OpenAI Vision API
-                print("[达芬奇] 使用OpenAI Vision API...")
-                vision_response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": "请详细描述这张图片的内容,包括主要主体、构图、颜色、场景、人物、物体等所有细节。用英文描述,约150-200字。"
-                                },
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": image_url
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    max_tokens=500
-                )
+            print(f"[达芬奇] 图片编辑成功")
 
-            image_description = vision_response.choices[0].message.content.strip()
-            print(f"[达芬奇] 图片描述: {image_description[:100]}...")
-
-        except Exception as vision_error:
-            print(f"[达芬奇] Vision API失败: {vision_error}")
-            # 如果Vision失败,使用简单描述
-            image_description = "A scene with main elements from the uploaded image"
-
-        # 构建最终的prompt
-        final_prompt = f"{image_description} {prompt}"
-        print(f"[达芬奇] 最终prompt: {final_prompt[:150]}...")
-
-        # 2. 使用DALL-E 3生成图片
-        print("[达芬奇] 使用DALL-E 3生成API...")
-
-        try:
-            response = client.images.generate(
-                prompt=final_prompt,
-                n=1,
-                size="1024x1024",
-                model="dall-e-3"
-            )
-            print(f"[达芬奇] DALL-E 3生成API调用成功")
-
-            if not response or not response.data or len(response.data) == 0:
-                raise Exception("API返回的数据为空")
-
-            print(f"[达芬奇] 图片生成成功")
-
-            # 获取图片数据
-            image_data = response.data[0]
-            print(f"[达芬奇] 响应数据字段: {dir(image_data)}")
-
-            # 检查是base64还是URL
-            if hasattr(image_data, 'b64_json') and image_data.b64_json:
-                # 使用base64数据
-                image_b64 = image_data.b64_json
-                print(f"[达芬奇] 使用base64数据, 长度: {len(image_b64)}")
-                # 解码base64为bytes
-                image_bytes = base64.b64decode(image_b64)
-            elif hasattr(image_data, 'url') and image_data.url:
-                # 使用URL下载图片
-                image_url = image_data.url
-                print(f"[达芬奇] 使用URL下载图片: {image_url}")
-
-                import requests
-                img_response = requests.get(image_url, timeout=60)
-                img_response.raise_for_status()
-                image_bytes = img_response.content
-            else:
-                raise Exception("生成的图片数据为空,没有找到b64_json或url字段")
-
-            # 生成文件名
-            timestamp = int(time.time())
+            # 保存编辑后的图片
             filename = f"davinci_{timestamp}.png"
             filepath = os.path.join(IMAGES_DIR, filename)
 
-            # 保存图片
             with open(filepath, 'wb') as f:
-                f.write(image_bytes)
+                f.write(edited_image_bytes)
 
             print(f"[达芬奇] 图片已保存: {filepath}")
 
@@ -1766,6 +1696,13 @@ def davinci_style():
             except Exception as crop_error:
                 print(f"[达芬奇] 裁剪失败: {crop_error}，使用原始图片")
                 final_filename = filename
+
+            # 清理临时文件
+            try:
+                os.remove(temp_input_path)
+                print("[达芬奇] 临时文件已删除")
+            except:
+                pass
 
             # 返回结果
             response_data = {
