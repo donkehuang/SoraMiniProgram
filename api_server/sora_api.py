@@ -906,23 +906,20 @@ def generate_smile_image():
         print("[步骤3] 生成开口笑图片...")
 
         try:
-            # 读取裁剪后的图片
-            with open(output_path, 'rb') as f:
-                image_file = f.read()
-
-            print(f"[编辑] 图片文件大小: {len(image_file)} 字节")
-
             # 调用images.edit接口，让原图片中的人物微笑
             prompt = "Make the person in the image smile naturally and happily."
 
             print(f"[编辑] Prompt: {prompt}")
+            print(f"[编辑] 图片路径: {output_path}")
             print(f"[编辑] 调用images.edit接口...")
 
-            response = client.images.edit(
-                model="gpt-image-1.5",
-                image=[image_file],
-                prompt=prompt
-            )
+            # 使用文件对象直接传入，OpenAI SDK会自动处理MIME类型
+            with open(output_path, 'rb') as f:
+                response = client.images.edit(
+                    model="gpt-image-1.5",
+                    image=[f],
+                    prompt=prompt
+                )
 
             print(f"[成功] 开口笑图片生成成功")
             print(f"[响应] 响应数据条数: {len(response.data)}")
