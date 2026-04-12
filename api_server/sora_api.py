@@ -1175,226 +1175,34 @@ def generate_smile_video():
             final_path = cropped_path
             final_filename = cropped_filename
 
-        # 4. 将图片上传到临时服务器获取URL
-        print("[步骤4] 准备首帧图片URL...")
+        # 4. 返回生成的图片（暂时不生成视频）
+        print("[步骤4] 准备返回生成的图片...")
 
-        # 生成视频ID
-        video_id = f"smile_{timestamp}"
+        # 生成图片ID
+        image_id = f"smile_{timestamp}"
 
-        # 将首帧图片转换为可访问的URL（实际部署时需要上传到外网）
-        # 这里使用本地路径，小程序需要能访问到
+        # 将首帧图片转换为可访问的URL
         frame_url = f"/images/{final_filename}"
 
-        print(f"[步骤4] 首帧URL: {frame_url}")
+        print(f"[步骤4] 图片URL: {frame_url}")
 
-        # 5. 调用Sora API生成视频
-        print("[步骤5] 调用Sora API生成视频...")
+        # 直接返回图片结果，不生成视频
+        print(f"[完成] 开口笑图片生成完成，暂不生成视频")
 
-        video_prompt = f"A person smiling warmly and naturally in the same setting and pose. The smile should be gentle and pleasant, brightening the face while maintaining the original identity. The person is in a {orientation} frame with natural lighting and composition."
-
-        try:
-            # 创建视频生成任务
-            print(f"[Sora] 正在创建视频任务...")
-            print(f"[Sora] prompt: {video_prompt[:100]}...")
-            print(f"[Sora] 图片路径: {final_path}")
-            print(f"[Sora] size: {size}")
-            print(f"[Sora] duration: {seconds}s")
-
-            # 根据尺寸设置aspect_ratio
-            if size == "1280x720":
-                aspect_ratio = "16:9"
-                resolution = "720p"
-            else:
-                aspect_ratio = "9:16"
-                resolution = "720p"
-
-            # 调用OpenAI的Sora视频生成API
-            sora_video_id = None
-            use_sora = True
-
-            try:
-                # 构建图片URL（使用本地服务器的图片URL）
-                # Sora API需要可以访问的URL，这里使用服务器本地的图片路径
-                # 实际部署时需要确保图片可以通过外网访问
-                base_url = request.host_url.rstrip('/')
-
-                # 将图片复制到可访问的位置
-                import shutil
-                public_image_path = os.path.join(VIDEOS_DIR, final_filename)
-                shutil.copy(final_path, public_image_path)
-
-                # 构建可访问的URL
-                image_url = f"{base_url}/videos/{final_filename}"
-                print(f"[Sora] 图片URL: {image_url}")
-
-                # Sora API目前不支持image参数，仅使用prompt生成
-                video_response = client.videos.create(
-                    model="sora-1.0-turbo",
-                    prompt=video_prompt,
-                    duration=f"{seconds}s",
-                    aspect_ratio=aspect_ratio,
-                    resolution=resolution,
-                )
-
-                sora_video_id = video_response.id
-                print(f"[Sora] ✅ 视频任务创建成功: {sora_video_id}")
-
-            except Exception as api_error:
-                print(f"[Sora] ❌ API调用失败: {api_error}")
-                print(f"[错误] 详细失败原因:")
-                print(f"[错误] - API异常类型: {type(api_error).__name__}")
-                print(f"[错误] - API异常信息: {str(api_error)}")
-                print(f"[错误] - 提示词: {video_prompt[:100]}...")
-                print(f"[错误] - 图片路径: {final_path}")
-                print(f"[错误] - 视频尺寸: {size}")
-                print(f"[错误] - 视频时长: {seconds}秒")
-                print(f"[错误] - 纵横比: {aspect_ratio}")
-                print(f"[错误] - 分辨率: {resolution}")
-                import traceback
-                print(f"[错误] 完整错误堆栈:")
-                traceback.print_exc()
-                # 清理任务
-                if video_id in video_tasks:
-                    del video_tasks[video_id]
-                # 直接返回错误，不使用回退
-                return jsonify({
-                    'success': False,
-                    'error': f'Sora视频生成失败: {str(api_error)}',
-                    'error_type': type(api_error).__name__,
-                    'details': {
-                        'prompt': video_prompt[:100] + '...',
-                        'size': size,
-                        'duration': f"{seconds}s",
-                        'aspect_ratio': aspect_ratio,
-                        'resolution': resolution
-                    }
-                }), 500
-
-            # 创建本地任务记录
-            local_filename = f"{video_id}.mp4"
-            video_tasks[video_id] = {
-                'status': 'in_progress',
-                'progress': 0,
-                'prompt': video_prompt,
-                'size': size,
-                'seconds': seconds,
-                'imageUrl': frame_url,
-                'sora_video_id': sora_video_id,
-                'createdAt': time.time()
-            }
-
-            print(f"[任务] 视频任务已创建: {video_id}")
-            print(f"[任务] Sora视频ID: {sora_video_id}")
-
-            # 异步处理视频生成和下载
-            import threading
-            def async_process():
-                try:
-                    # 轮询查询视频状态
-                    while True:
-                        video = client.videos.retrieve(sora_video_id)
-                        progress = getattr(video, "progress", 0)
-
-                        # 更新任务状态
-                        video_tasks[video_id].update({
-                            'status': video.status,
-                            'progress': progress
-                        })
-
-                        print(f"[进度] 视频{video_id}: {video.status} {progress:.1f}%")
-
-                        if video.status in ("in_progress", "queued"):
-                            time.sleep(3)
-                        else:
-                            break
-
-                    if video.status == "failed":
-                        error_message = getattr(
-                            getattr(video, "error", None), "message", "视频生成失败"
-                        )
-                        print(f"[失败] {error_message}")
-                        video_tasks[video_id].update({
-                            'status': 'failed',
-                            'error': error_message
-                        })
-                        return
-
-                    # 视频生成完成，下载视频
-                    print(f"[完成] 视频生成完成，开始下载...")
-
-                    # 下载视频内容
-                    content = client.videos.download_content(sora_video_id, variant="video")
-                    local_path = os.path.join(VIDEOS_DIR, local_filename)
-
-                    # 写入文件
-                    content.write_to_file(local_path)
-
-                    # 验证文件
-                    if not os.path.exists(local_path):
-                        print(f"[错误] 文件未创建: {local_path}")
-                        video_tasks[video_id].update({
-                            'status': 'failed',
-                            'error': '视频文件下载失败'
-                        })
-                        return
-
-                    file_size = os.path.getsize(local_path)
-                    print(f"[下载] ✅ 视频已保存: {local_path} ({file_size / 1024 / 1024:.2f} MB)")
-
-                    # 更新任务状态为完成
-                    video_tasks[video_id].update({
-                        'status': 'completed',
-                        'progress': 100,
-                        'local_path': local_path,
-                        'size': file_size
-                    })
-
-                    print(f"[完成] ✅ 视频处理完成: {video_id}")
-
-                except Exception as e:
-                    print(f"[错误] 异步处理失败: {e}")
-                    video_tasks[video_id].update({
-                        'status': 'failed',
-                        'error': str(e)
-                    })
-
-            # 启动异步处理线程
-            thread = threading.Thread(target=async_process)
-            thread.daemon = True
-            thread.start()
-
-            response_data = {
-                'success': True,
-                'videoId': video_id,
-                'status': 'in_progress',
-                'imageUrl': frame_url,
-                'message': '视频生成任务已创建'
-            }
-
-            print(f"[响应] 返回视频任务: {response_data}")
-            return jsonify(response_data), 200
-
-        except Exception as e:
-            print(f"[错误] 视频生成失败: {e}")
-            import traceback
-            traceback.print_exc()
-
-            # 清理任务
-            if video_id in video_tasks:
-                del video_tasks[video_id]
-
-            return jsonify({
-                'success': False,
-                'error': f'视频生成失败: {str(e)}'
-            }), 500
+        return jsonify({
+            'success': True,
+            'imageId': image_id,
+            'imageUrl': frame_url,
+            'message': '开口笑图片生成成功（视频功能暂时禁用）'
+        })
 
     except Exception as e:
-        print(f"[错误] 开口笑视频生成失败: {e}")
+        print(f"[错误] 开口笑图片生成失败: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
             'success': False,
-            'error': f'生成失败: {str(e)}'
+            'error': f'图片生成失败: {str(e)}'
         }), 500
 
 
