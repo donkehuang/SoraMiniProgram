@@ -543,7 +543,14 @@ Page({
           console.log('[下载] 状态码:', res.statusCode)
           console.log('[下载] 临时文件路径:', res.tempFilePath)
 
-          if (res.statusCode === 200) {
+          if (res.statusCode === 200 && res.tempFilePath) {
+            // 检查tempFilePath是否是本地路径
+            if (res.tempFilePath.startsWith('http') || res.tempFilePath.startsWith('wxfile://')) {
+              console.error('[下载] ❌ 临时文件路径格式异常:', res.tempFilePath)
+              reject(new Error('下载的文件路径格式异常'))
+              return
+            }
+
             // 使用getFileInfo获取实际的文件大小
             wx.getFileInfo({
               filePath: res.tempFilePath,
@@ -560,7 +567,10 @@ Page({
               },
               fail: (err) => {
                 console.error('[下载] ❌ 获取文件信息失败:', err)
-                if (res.tempFilePath) {
+                console.error('[下载] filePath:', res.tempFilePath)
+                // 即使getFileInfo失败，如果tempFilePath是本地路径，仍然尝试使用
+                if (res.tempFilePath && !res.tempFilePath.startsWith('http')) {
+                  console.log('[下载] 跳过文件信息验证，直接返回路径')
                   resolve(res.tempFilePath)
                 } else {
                   reject(new Error('下载失败: 无法验证文件'))
@@ -574,9 +584,12 @@ Page({
         },
         fail: (err) => {
           console.error('[下载] 下载失败:', err)
+          console.error('[下载] 错误详情:', JSON.stringify(err))
 
           if (err.errMsg && err.errMsg.includes('timeout')) {
             reject(new Error('下载超时'))
+          } else if (err.errMsg && err.errMsg.includes('domain')) {
+            reject(new Error('下载域名未在小程序管理后台配置'))
           } else {
             reject(new Error(err.errMsg || '下载失败'))
           }

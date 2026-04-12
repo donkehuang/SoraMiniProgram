@@ -910,10 +910,14 @@ def generate_smile_image():
             with open(output_path, 'rb') as f:
                 image_file = f.read()
 
+            print(f"[编辑] 图片文件大小: {len(image_file)} 字节")
+
             # 调用images.edit接口，让原图片中的人物微笑
             prompt = "Make the person in the image smile naturally and happily."
 
-            print(f"[编辑] 使用images.edit接口编辑图片...")
+            print(f"[编辑] Prompt: {prompt}")
+            print(f"[编辑] 调用images.edit接口...")
+
             response = client.images.edit(
                 model="gpt-image-1.5",
                 image=[image_file],
@@ -921,12 +925,15 @@ def generate_smile_image():
             )
 
             print(f"[成功] 开口笑图片生成成功")
+            print(f"[响应] 响应数据条数: {len(response.data)}")
 
             # 获取生成的图片
             image_b64 = response.data[0].b64_json
+            print(f"[响应] 图片base64长度: {len(image_b64)} 字符")
 
             # 解码base64为bytes
             smile_image_bytes = base64.b64decode(image_b64)
+            print(f"[解码] 解码后大小: {len(smile_image_bytes)} 字节")
 
             # 保存开口笑图片
             smile_filename = f"smile_result_{timestamp}.png"
@@ -943,32 +950,40 @@ def generate_smile_image():
             crop_image_to_sora_size(smile_filepath, smile_output_path, target_width, target_height)
 
             print(f"[保存] 最终图片已保存: {smile_output_path}")
+            print(f"[返回] 将返回编辑后的图片: {smile_output_filename}")
+
+            # 4. 清理临时文件
+            try:
+                os.remove(temp_input_path)
+                print("[清理] 临时文件已删除")
+            except:
+                pass
+
+            # 返回结果
+            response_data = {
+                'success': True,
+                'imageUrl': f'/images/{smile_output_filename}',
+                'orientation': orientation,
+                'size': f'{target_width}x{target_height}'
+            }
+
+            print(f"[响应] 返回开口笑图片: {response_data}")
+            return jsonify(response_data), 200
 
         except Exception as e:
             print(f"[错误] 图片编辑失败: {e}")
             import traceback
             traceback.print_exc()
-            # 如果编辑失败，返回原始裁剪图片
-            smile_output_path = output_path
-            smile_output_filename = output_filename
-
-        # 4. 清理临时文件
-        try:
-            os.remove(temp_input_path)
-            print("[清理] 临时文件已删除")
-        except:
-            pass
-
-        # 返回结果
-        response_data = {
-            'success': True,
-            'imageUrl': f'/images/{smile_output_filename}',
-            'orientation': orientation,
-            'size': f'{target_width}x{target_height}'
-        }
-
-        print(f"[响应] 返回开口笑图片: {response_data}")
-        return jsonify(response_data), 200
+            # 编辑失败，返回错误信息而不是回退到原图
+            # 清理临时文件
+            try:
+                os.remove(temp_input_path)
+            except:
+                pass
+            return jsonify({
+                'success': False,
+                'error': f'图片编辑失败: {str(e)}'
+            }), 500
 
     except Exception as e:
         print(f"[错误] 开口笑图片生成失败: {e}")
