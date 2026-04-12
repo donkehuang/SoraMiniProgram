@@ -902,63 +902,28 @@ def generate_smile_image():
 
         print(f"[步骤2] 图片裁剪完成: {output_path}")
 
-        # 3. 使用DALL-E生成开口笑图片（人物微笑）
+        # 3. 使用images.edit接口直接修改图片为微笑表情
         print("[步骤3] 生成开口笑图片...")
 
-        # 先裁剪图片用于识别
-        img_pil = Image.open(output_path)
-        img_byte_arr = BytesIO()
-        img_pil.save(img_byte_arr, format='PNG')
-        img_byte_arr = img_byte_arr.getvalue()
-
-        # 将图片转为base64
-        import base64
-        img_b64 = base64.b64encode(img_byte_arr).decode()
-
-        # 使用GPT-4 Vision先分析图片，然后用DALL-E 3生成笑脸版本
         try:
-            print("[分析] 使用GPT-4 Vision分析图片...")
-            vision_response = client.chat.completions.create(
-                model="gpt-4-vision-preview",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "Please describe this photo in detail. Include: the person's gender, age range, hair color and style, clothing type and color, pose, background setting, lighting conditions, and overall mood. Be very specific about the person's appearance so we can recreate them accurately."
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/png;base64,{img_b64}"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens=500
-            )
+            # 读取裁剪后的图片
+            with open(output_path, 'rb') as f:
+                image_file = f.read()
 
-            image_description = vision_response.choices[0].message.content
-            print(f"[分析] 图片描述: {image_description}")
+            # 调用images.edit接口，让原图片中的人物微笑
+            prompt = "Make the person in the image smile naturally and happily."
 
-            # 根据描述生成笑脸版本
-            smile_prompt = f"Based on this detailed description: '{image_description}'. Generate a photo of this EXACT SAME person with ALL the same characteristics - same gender, same age, same hair color and style, same clothing type and color, same pose, same background setting, same lighting. The ONLY difference is the facial expression - instead of being sad or crying, the person must be SMILING HAPPILY with a big, genuine, cheerful smile showing joy. The smile should be natural and pleasant. Keep the entire image composition identical to the description, just change the emotion from sad to happy."
-
-            response = client.images.generate(
-                prompt=smile_prompt,
-                n=1,
-                size="1024x1024",
-                model="dall-e-3",
-                quality="hd"
+            print(f"[编辑] 使用images.edit接口编辑图片...")
+            response = client.images.edit(
+                model="gpt-image-1.5",
+                image=[image_file],
+                prompt=prompt
             )
 
             print(f"[成功] 开口笑图片生成成功")
 
             # 获取生成的图片
-            image_data = response.data[0]
-            image_b64 = image_data.b64_json
+            image_b64 = response.data[0].b64_json
 
             # 解码base64为bytes
             smile_image_bytes = base64.b64decode(image_b64)
@@ -980,8 +945,10 @@ def generate_smile_image():
             print(f"[保存] 最终图片已保存: {smile_output_path}")
 
         except Exception as e:
-            print(f"[错误] DALL-E生成失败: {e}")
-            # 如果DALL-E失败，返回原始裁剪图片
+            print(f"[错误] 图片编辑失败: {e}")
+            import traceback
+            traceback.print_exc()
+            # 如果编辑失败，返回原始裁剪图片
             smile_output_path = output_path
             smile_output_filename = output_filename
 
